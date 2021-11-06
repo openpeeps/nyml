@@ -1,3 +1,11 @@
+# 
+# A simple YAML-1.0 parser to JsonNode and from JSON back to YAML.
+# https://github.com/openpeep/nyml
+# 
+# Copyright 2021 George Lemon from OpenPeep
+# Released under MIT License
+#
+
 import json, ./meta
 from ./lexer import TokenKind
 from strutils import `%`, contains, split, parseInt, parseBool
@@ -103,7 +111,6 @@ proc parseToJson*[T: Nyml](yml: var T,
             prev = curr         # current token as previously token declaration
             currKey = curr      # current token as previously key declaration
         else:
-            # echo curr.indent > prev.indent
             if prev.kind == TK_KEY and curr.kind == TK_KEY:
                 if prev.line == curr.line:
                     # Prevent multiple keys on the same line
@@ -138,7 +145,7 @@ proc parseToJson*[T: Nyml](yml: var T,
                         while true:
                             try:
                                 if subtkns[ii].indent == prev.indent:
-                                    echo "yeeeeee"
+                                    discard
                                 elif subtkns[ii].indent > prev.indent:
                                     cpsubtkns.add(subtkns[ii])
                                 elif subtkns[ii].kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}:
@@ -156,8 +163,7 @@ proc parseToJson*[T: Nyml](yml: var T,
                             if cpsubtkn.kind == TK_KEY:
                                 treekeys.add(cpsubtkn.value & ".")
                             delete(allTokens, allTokens.find(cpsubtkn))
-                        
-                        # echo cpsubtkns
+
                         tree = putIt(tree, treekeys.cutLast(), getTknValByType(prev.kind, prev.value))
                         contents[origin.value] = tree
                         continue    # no need for parsing, skip it
