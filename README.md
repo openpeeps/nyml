@@ -20,6 +20,7 @@ let grocery_list = """
 user:
     id: 12345
     name: "jenna.jay"
+
 cart:
     - apples
     - avocado
