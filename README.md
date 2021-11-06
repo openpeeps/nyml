@@ -2,7 +2,15 @@ Nyml is a simple YAML-1.0-like implementation for Nim language. Fast and Easy, *
 
 _If you need a YAML 1.2 compatible library go with [flyx's NimYAML](https://github.com/flyx/NimYAML)._
 
-Nyml is highly recommended for holding static configuration files, providing `get`, `add`, `update`, `delete` procs with or without `dot annotation access` for `JSON` nodes. Also included, a boolean formatter (supporting `no`, `yes`, `true`, `false`, lowercase and uppercase), `array` (inline or list), `string` (single/doubled quotes), `integer`, `object` trees and... `comments`. That's it!
+Nyml is highly recommended for holding static configuration files, providing `get`, `add`, `update`, `delete` procs with or without `dot annotation access` for `JSON` nodes.
+
+Also included: 
+- `boolean` formatter (`no`, `yes`, `true`, `false`, lowercase and uppercase)
+- `integer`
+- `string` (single/double quotes)
+- `array` (inline or list)
+- `object` trees
+- `comments`
 
 # Usage
 ```python
