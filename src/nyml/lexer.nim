@@ -16,8 +16,11 @@ type
         TK_INTEGER
         TK_STRING
         TK_BOOLEAN
+        
         TK_ARRAY
+        TK_ARRAY_VALUE
         TK_ARRAY_BLOCK
+        
         TK_OBJECT
         TK_COMMENT
         TK_END_OF_INPUT = "End_of_input",
@@ -151,7 +154,7 @@ proc handleSequence[T: Lexer](lex: var T) =
             discard lex.handleSpecial()
             if lex.hasError(): return
         of ']':
-            lex.kind = TK_ARRAY
+            lex.kind = TK_ARRAY_BLOCK
             add lex.token, ']'
             inc lex.bufpos
             break
@@ -222,7 +225,10 @@ proc getToken*[T: Lexer](lex: var T): TokenKind =
     of '0'..'9': lex.handleNumber()
     of 'a'..'z', 'A'..'Z', ':', '_': lex.handleIdent()
     of '-':
-        lex.setTokenMeta(TK_ARRAY_BLOCK, 1)
+        lex.bufpos = lex.bufpos + 1
+        skip lex
+        lex.handleString()
+        lex.kind = TK_ARRAY_VALUE
     of '[':
         lex.handleSequence()
     of '"', '\'': lex.handleString()
@@ -230,22 +236,22 @@ proc getToken*[T: Lexer](lex: var T): TokenKind =
         lex.startPos = lex.getColNumber(lex.bufpos)
         lex.kind = TK_END_OF_INPUT
     else:
-        lex.setError("Unrecognized character")
+        lex.setError("Unrecognized character $1" % [lex.token])
     result = lex.kind
 
-proc tokenizeIt*(yamlContents: string): seq[tuple[kind: TokenKind, value: string, line, indent: int]] =
+proc tokenizeIt*(yamlContents: string): seq[tuple[kind: TokenKind, value, annot: string, line, indent: int]] =
     var lex: Lexer
-    var toknized: seq[tuple[kind: TokenKind, value: string, line, indent: int]]
+    var toknized: seq[tuple[kind: TokenKind, value, annot: string, line, indent: int]]
     lex.open(newStringStream(yamlContents))
 
     while lex.getToken() notin {TK_INVALID}:
         if lex.kind in {TK_END_OF_INPUT}: break
         # debug
         # let tknized = "$1(value: $2, indent: $3, line: $4)" % [$lex.kind, $lex.token, $lex.whitespaces, $lex.lineNumber]
-        toknized.add((kind: lex.kind, value: lex.token, line: lex.lineNumber, indent: lex.whitespaces))
+        toknized.add((kind: lex.kind, value: lex.token, annot: "", line: lex.lineNumber, indent: lex.whitespaces))
     lex.close()
 
     # Raise error if any, highlighting the line and col number
     if lex.hasError():
-        echo "($1, $2) {lex.error}" % [$lex.lineNumber, $(lex.getColNumber lex.bufpos + 1)]
+        echo "($1, $2) $3" % [$lex.lineNumber, $(lex.getColNumber lex.bufpos + 1), lex.error]
     else: return toknized

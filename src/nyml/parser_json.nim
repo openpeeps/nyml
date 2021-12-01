@@ -9,6 +9,7 @@
 import json, ./meta
 from ./lexer import TokenKind
 from strutils import `%`, contains, split, parseInt, parseBool
+import ./utils
 
 type Document* = object
         json_contents: JsonNode         # Used by Y2J engine to store JSON contents
@@ -17,7 +18,7 @@ type Document* = object
 proc getTknValByType(tk: TokenKind, tk_val: string): JsonNode =
     # Internal procedure for mapping given
     # token value with a JsonNode of its kind
-    var value: JsonNode
+    var value: JsonNode 
     value = case tk:
             # of TK_STRING: newJString(tk_val)
             of TK_INTEGER: newJInt(parseInt(tk_val))
@@ -26,7 +27,27 @@ proc getTknValByType(tk: TokenKind, tk_val: string): JsonNode =
             else: newJString(tk_val)
     return value
 
+
 proc get(jContents: JsonNode, key: string = ""): JsonNode = 
+    # TODO try implement dot annotation access using macros:
+    # doc.get("field.level.second.third")
+    # 
+    # produce:
+    # field["level"]["second"]["third"]
+    # 
+    # from:
+    # nnkStmtList.newTree(
+    #   nnkBracketExpr.newTree(
+    #     nnkBracketExpr.newTree(
+    #       nnkBracketExpr.newTree(
+    #         newIdentNode("field"),
+    #         newLit("level")
+    #       ),
+    #       newLit("second")
+    #     ),
+    #     newLit("third")
+    #   )
+    # )
     if key.contains("."):
         var i = 0
         var k = key.split(".", maxsplit=1)
@@ -67,33 +88,114 @@ proc putIt(contents: JsonNode, key: string, value: JsonNode, isLastCall=false): 
         return tree
     return %*{key: value}
 
-proc setError[T: Nyml](handler: var T, tkn: tuple[kind: TokenKind, value: string, line, indent: int], msg: string) =
-    handler.error = "(line: $1) Error - $2" % [$tkn.line, msg]
-proc hasError[T: Nyml](handler: var T): bool = handler.error.len != 0
-proc sameLine(v_tkl, k_tkl: int): bool = v_tkl == k_tkl
-proc sameWith(prev, curr: TokenKind, these: set[TokenKind]): bool = prev in these and curr in these
+proc setError[T: Nyml](handler: var T, lineno: int, msg: string) =
+    # Set an error during parsing
+    handler.error = "NymlError: $1 (line: $2)" % [msg, $lineno]
+
+proc hasError[T: Nyml](handler: var T): bool =
+    # Determine if current parse process has errors
+    result = handler.error.len != 0
+
+proc isSame(a, b: int): bool =
+    result = a == b
+proc isSameWith(prev, curr: TokenKind, these: set[TokenKind]): bool = prev in these and curr in these
+
+proc assignValue(curr: tuple[kind: TokenKind, value, annot: string, line, indent: int]): JsonNode =
+    # Assign a value to its key. It can be either TK_STRING, TK_INTEGER or TK_BOOLEAN.
+    var value: JsonNode
+    case curr.kind:
+    of TK_STRING:
+        value = newJString(curr.value)
+    of TK_INTEGER:
+        value = newJInt(parseInt(curr.value))
+    of TK_BOOLEAN:
+        value = newJBool(parseBool(curr.value))
+    else: discard
+    return value
+
+proc assignArrayValue(curr: tuple[kind: TokenKind, value, annot: string, line, indent: int]): JsonNode =
+    var value: JsonNode
+    var parsed = false
+    try:
+        # Try parse as a boolean value. For more details related
+        # string to bool values check parseBoolValue procedure from ./utils
+        value = newJBool(parseBoolValue(curr.value))
+        parsed = true
+    except ValueError:
+        parsed = false
+
+    if not parsed:
+        # If could not parse as a boolean, let's try parsing as an integer
+        try:
+            value = newJInt(parseInt(curr.value))
+        except ValueError:
+            parsed = false
+    if not parsed:
+        value = newJString(curr.value)
+
+    return value
+
+macro createJsonArray(): untyped =
+    # Macro for creating dynamic JSON Arrays
+    discard
+
+macro createJsonObject(): untyped =
+    # Macro for creating dynamic JSON Objects
+    discard
+
+proc isKey(tk: TokenKind): bool =
+    # Determine if current token is kind of TK_KEY 
+    return tk == TK_KEY
+
+proc isArray(tk: TokenKind): bool =
+    # Determine if current token is type of TK_ARRAY_BLOCK
+    return tk == TK_ARRAY_VALUE
+
+proc isInlineArray(tk: TokenKind): bool =
+    # Determine if current token is type of TK_ARRAY
+    return tk == TK_ARRAY_BLOCK
+
+proc isValue(): bool =
+    # Determine if current token is kind of
+    # TK_STRING, TK_INTEGER, TK_BOOLEAN or TK_ARRAY
+    discard
+
+proc isLiteral(tokenKind: TokenKind): bool =
+    # Determine if current token kind is in given literal set.
+    return tokenKind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}
+
+proc isChildOf(currIndent, prevIndent: int): bool =
+    # Determine if current token is child of given previous key
+    return currIndent > prevIndent
 
 proc parseToJson*[T: Nyml](yml: var T,
-    tokens: seq[tuple[kind: TokenKind, value: string, line, indent: int]]): Document =
-    var i = 0
-    var ii = 0
-
-    var contents = %* {}
-    var tknsLen = tokens.len
-    var allTokens = tokens
-    var treekeys: string
-    var curr, prev, currKey, origin, root: tuple[
-        kind: TokenKind,
-        value: string,
-        line, indent: int
-    ]
+    tokens: seq[tuple[kind: TokenKind, value, annot: string,  line, indent: int]]): Document =
+    var
+        i = 0
+        ii = 0
+        contents = %* {}
+        tokensLength = tokens.len
+        allTokens = tokens
+        treekeys: string
+        curr, prev, currKey, prevKey, origin, root: tuple[
+            kind: TokenKind,    # the token type
+            value: string,      # the token value
+            annot: string,      # holds dot annotations of creating/accessing deeper levels
+            line, indent: int   # line nunber and indentations (whitespaces)
+        ]
 
     root.kind = TK_SKIPPABLE
 
     while true:
-        if i == tknsLen: break
-        try: curr = allTokens[i]
-        except IndexDefect: break
+        if i == tokensLength:
+            break # nothing to parse
+        try:
+            curr = allTokens[i]
+        except IndexDefect:
+            break
+
+        if curr.kind == TK_KEY:
+            currKey = curr
 
         if curr.kind == TK_COMMENT:
             delete(allTokens, i)
@@ -101,131 +203,60 @@ proc parseToJson*[T: Nyml](yml: var T,
 
         if prev.kind == TK_NONE:
             if curr.kind == TK_KEY and curr.indent != 0:
-                yml.setError(curr, "First key cannot be indented")
+                yml.setError(curr.line, "First key cannot be indented")
                 break
             elif curr.kind != TK_KEY:
-                yml.setError(curr, "Missing key declaration")
+                yml.setError(curr.line, "Missing key declaration")
                 break
-
             contents[curr.value] = newJObject()
             prev = curr         # current token as previously token declaration
-            currKey = curr      # current token as previously key declaration
+            prevKey = curr      # current token as previously key declaration
         else:
-            if prev.kind == TK_KEY and curr.kind == TK_KEY:
-                if prev.line == curr.line:
-                    # Prevent multiple keys on the same line
-                    yml.setError(curr, "Multiple keys on the same line")
+            # Start create the key-value assignment
+            if curr.kind.isKey():
+                # Before parsing tokens we must ensure we have
+                # some clean contents following the NYML standards
+                if currKey.line.isSame(prevKey.line):
+                    # Prevent multiple key declarations on the same line
+                    yml.setError(currKey.line, "Key '$1' has conflict with '$2'" % [currKey.value, prevKey.value])
                     break
-                elif curr.indent == prev.indent:
-                    yml.setError(curr, "Indentation required")
+                elif currKey.indent.isSame(prevKey.indent) and prev.kind.isLiteral() == false:
+                    # Prevent multiple key declarations on different lines without indentation
+                    yml.setError(currKey.line, "Bad indentation for '$1' key declaration" % [currKey.value])
                     break
-
-            if curr.kind == TK_KEY:
-                if contents.hasKey(curr.value):
-                    yml.setError(curr, "Duplicate keys")
-                    break
-                elif prev.kind in {TK_ARRAY, TK_OBJECT} and prev.line == curr.line:
-                    yml.setError(curr, "Key declaration requires indentation")
-                    break
-
-                if prev.kind == TK_KEY and curr.indent > prev.indent:
-                    if prev.indent == 0:
-                        origin = prev
-                        treekeys = ""
-                        currKey = curr
-                        prev = curr
-
-                        # entering in grandparents, exclude itself from tokens list
-                        # and retrieve the rest of the list so we can walk and
-                        # determine the entire three of the origin
-                        var originPosition = i
-                        var subtkns = allTokens[originPosition + 1 .. ^1]
-                        var cpsubtkns: seq[tuple[kind: TokenKind, value: string, line, indent: int]]
-                        var tree = newJObject()
-                        while true:
-                            try:
-                                if subtkns[ii].indent == prev.indent:
-                                    discard
-                                elif subtkns[ii].indent > prev.indent:
-                                    cpsubtkns.add(subtkns[ii])
-                                elif subtkns[ii].kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}:
-                                    cpsubtkns.add(subtkns[ii])
-                                else: break
-                            except IndexDefect: break
-                            prev = subtkns[ii]
-                            inc ii
-                            inc originPosition
-                        ii = 0
-
-                        # Remove the copied tree of tokens from main list
-                        cpsubtkns.insert(currKey)   # insert second level key
-                        for cpsubtkn in cpsubtkns:
-                            if cpsubtkn.kind == TK_KEY:
-                                treekeys.add(cpsubtkn.value & ".")
-                            delete(allTokens, allTokens.find(cpsubtkn))
-
-                        tree = putIt(tree, treekeys.cutLast(), getTknValByType(prev.kind, prev.value))
-                        contents[origin.value] = tree
-                        continue    # no need for parsing, skip it
-                else: discard
-                currKey = curr
+                if currKey.indent.isChildOf(prevKey.indent):
+                    # Handle key declarations for deeper levels
+                    echo curr
+                else:
+                    # Otherwise define keys with a predefined object type value
+                    # This is the first case for key declaratiosn
+                    contents[curr.value] = newJObject()
+                    currKey = curr      # set current token key
                 prev = curr
-            elif currKey.kind == TK_KEY and curr.kind in {TK_ARRAY_BLOCK}:
-                prev = curr
-            
-            elif currKey.kind == TK_KEY and curr.kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}:
-                if not curr.line.sameLine(currKey.line) and prev.kind notin {TK_ARRAY_BLOCK}:
-                    yml.setError(curr, "Bad indentation on string value assignment " & $prev.value)
-                    break
-                elif prev.kind.sameWith(curr.kind, {TK_STRING, TK_INTEGER, TK_BOOLEAN}) or prev.kind in {TK_ARRAY, TK_OBJECT}:
-                    yml.setError(curr, "Unallowed mix of values assigned to the same key.")
-                    break
-
-                if prev.kind in {TK_ARRAY_BLOCK}:
-                    if not contents.hasKey(currKey.value):
-                        contents[currKey.value] = newJArray()
-
-                case curr.kind:
-                of TK_STRING:
-                    var str_v = newJString(curr.value)
-                    if prev.kind in {TK_ARRAY_BLOCK}:
-                        contents[currKey.value].add(str_v)
+            else:
+                if currKey.indent.isChildOf(prevKey.indent):
+                    # Handle value assignments for deeper levels
+                    echo curr
+                else:
+                    # Otherwise is just a simple key-value assignment
+                    if curr.kind.isArray():
+                        if contents[currKey.value].len == 0:
+                            contents[currKey.value] = newJArray()
+                        contents[currKey.value].add(assignArrayValue(curr))
                     else:
-                        contents[currKey.value] = str_v
-                        prev = curr
-                of TK_INTEGER:
-                    var int_v = newJInt(parseInt(curr.value))
-                    if prev.kind in {TK_ARRAY_BLOCK}:
-                        contents[currKey.value].add(int_v)
-                    else:
-                        contents[currKey.value] = int_v
-                        prev = curr
-                of TK_BOOLEAN:
-                    var bool_v = newJBool(parseBool(curr.value))
-                    if prev.kind in {TK_ARRAY_BLOCK}:
-                        contents[currKey.value].add(bool_v)
-                    else:
-                        contents[currKey.value] = bool_v
-                        prev = curr
-                else: discard
-            elif currKey.kind == TK_KEY and curr.kind in {TK_ARRAY, TK_OBJECT}:
-                # Inline Arrays and Object assignments
-                if prev.kind in {TK_ARRAY, TK_OBJECT}:
-                    yml.setError(curr, "Unallowed mix of values assigned to the same key.")
-                    break
 
-                case curr.kind:
-                of TK_ARRAY:
-                    try:
-                        contents[currKey.value] = parseJson(curr.value)
-                    except JsonParsingError:
-                        yml.setError(curr, "Invalid array format")
-                    prev = curr
-                else: discard
+                        if prev.kind.isLiteral() or prev.kind in {TK_ARRAY_VALUE}:
+                            yml.setError(curr.line, "Unallowed mix of values assigned to the same key.")
+                            break
+
+                        contents[currKey.value] = assignValue(curr)
+                
+                prev = curr             # set current token as previous
+                prevKey = currKey       # set current key as previous
         inc i
 
     if yml.hasError():
         echo "\n" & yml.error & "\n"
-        return Document(json_contents: newJObject())
+        result = Document(json_contents: newJObject())
     else: 
-        return Document(json_contents: contents)
+        result = Document(json_contents: contents)
