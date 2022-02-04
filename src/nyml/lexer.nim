@@ -2,12 +2,12 @@
 # A simple YAML-1.0 parser to JsonNode and from JSON back to YAML.
 # https://github.com/openpeep/nyml
 # 
-# Copyright 2021 George Lemon from OpenPeep
+# Copyright 2022 George Lemon from OpenPeep
 # Released under MIT License
 # 
 
 import os, lexbase, streams, json, tables, re
-from strutils import Whitespace, `%`, replace, indent
+from strutils import Whitespace, `%`, replace, indent, startsWith
 
 type
     TokenKind* = enum
@@ -16,14 +16,12 @@ type
         TK_INTEGER
         TK_STRING
         TK_BOOLEAN
-        
         TK_ARRAY
         TK_ARRAY_VALUE
         TK_ARRAY_BLOCK
-        
         TK_OBJECT
         TK_COMMENT
-        TK_END_OF_INPUT = "End_of_input",
+        TK_EOL = "End_of_input",
         TK_INVALID
         TK_SKIPPABLE
 
@@ -40,14 +38,16 @@ template setError(l: var Lexer; err: string): untyped =
         l.error = err
  
 proc hasError[T: Lexer](self: T): bool = self.error.len > 0
- 
-proc open*[T: Lexer](lex: var T; input: Stream) {.inline.} =
-    ## Initialize a new Lexer instance with given Stream
-    lexbase.open(lex, input)
+
+proc init*[T: typedesc[Lexer]](lex: T; fileContents: string): Lexer =
+    ## Initialize a new BaseLexer instance with given Stream
+    var lex = Lexer()
+    lexbase.open(lex, newStringStream(fileContents))
     lex.startPos = 0
     lex.kind = TK_INVALID
     lex.token = ""
     lex.error = ""
+    return lex
 
 proc nextToEOL[T: Lexer](lex: var T): tuple[pos: int, token: string] =
     # Get entire buffer starting from given position to the end of line
@@ -120,7 +120,6 @@ proc handleChar[T: Lexer](lex: var T) =
 proc handleString[T: Lexer](lex: var T) =
     ## Handle string values wrapped in single or double quotes
     lex.startPos = lex.getColNumber(lex.bufpos)
-    # lex.token = "\""    # no need to add quotes
     lex.token = ""
     inc lex.bufpos
     while true:
@@ -128,9 +127,8 @@ proc handleString[T: Lexer](lex: var T) =
         of '\\':
             discard lex.handleSpecial()
             if lex.hasError(): return
-        of '"', '\'':
+        of '"':
             lex.kind = TK_STRING
-            # add lex.token, '"' # no need to close with quotes
             inc lex.bufpos
             break
         of NewLines:
@@ -213,7 +211,7 @@ proc setTokenMeta*[T: Lexer](lex: var T, tokenKind: TokenKind, offset:int = 0) =
     lex.startPos = lex.getColNumber(lex.bufpos)
     inc(lex.bufpos, offset)
 
-proc getToken*[T: Lexer](lex: var T): TokenKind =
+proc getToken*[T: Lexer](lex: var T): tuple[kind: TokenKind, value: string, wsno, col, line: int] =
     ## Parsing through available tokens
     lex.kind = TK_INVALID
     setLen(lex.token, 0)
@@ -234,24 +232,7 @@ proc getToken*[T: Lexer](lex: var T): TokenKind =
     of '"', '\'': lex.handleString()
     of EndOfFile:
         lex.startPos = lex.getColNumber(lex.bufpos)
-        lex.kind = TK_END_OF_INPUT
+        lex.kind = TK_EOL
     else:
         lex.setError("Unrecognized character $1" % [lex.token])
-    result = lex.kind
-
-proc tokenizeIt*(yamlContents: string): seq[tuple[kind: TokenKind, value, annot: string, line, indent: int]] =
-    var lex: Lexer
-    var toknized: seq[tuple[kind: TokenKind, value, annot: string, line, indent: int]]
-    lex.open(newStringStream(yamlContents))
-
-    while lex.getToken() notin {TK_INVALID}:
-        if lex.kind in {TK_END_OF_INPUT}: break
-        # debug
-        # let tknized = "$1(value: $2, indent: $3, line: $4)" % [$lex.kind, $lex.token, $lex.whitespaces, $lex.lineNumber]
-        toknized.add((kind: lex.kind, value: lex.token, annot: "", line: lex.lineNumber, indent: lex.whitespaces))
-    lex.close()
-
-    # Raise error if any, highlighting the line and col number
-    if lex.hasError():
-        echo "($1, $2) $3" % [$lex.lineNumber, $(lex.getColNumber lex.bufpos + 1), lex.error]
-    else: return toknized
+    result = (kind: lex.kind, value: lex.token, wsno: lex.whitespaces, col: lex.startPos, line: lex.lineNumber)

@@ -10,16 +10,16 @@ import json
 import nyml/[meta, lexer, utils, parser_json]
 from strutils import contains, split
 
-export Nyml, EngineParser, Document
+export Nyml, EngineParser, Document, TokenKind, parser_json.get
 
 proc parse*[T: Nyml](nymlObject: T, contents: string): Document =
     ## Parse YAML contents to JSON
     var nyml = nymlObject
     if nyml.engine == Y2J:
-        return nyml.parseToJson(lexer.tokenizeIt(contents))
+        return nyml.parseToJson(contents)
     
     raise newException(NymlException,
-        "Stringified contents can be parsed only by Y2J engine *(YAML to JSON)")
+        "Stringified contents can be parsed only by Y2J engine (YAML to JSON)")
 
 proc parse*[T: Nyml](nyml: T, contents: JsonNode): Document =
     ## Parse JsonNode contents to YAML
@@ -28,5 +28,6 @@ proc parse*[T: Nyml](nyml: T, contents: JsonNode): Document =
     raise newException(NymlException,
         "JSON contents can be parsed only by J2Y engine *(JSON to YAML)")
 
-# let doc = Nyml(engine: Y2J).parse(readFile("sample.yml"))
-# echo pretty(doc.get(), 4)
+when isMainModule:
+    let doc = Nyml(engine: Y2J).parse(readFile("sample.yml"))
+    echo pretty(doc.get(), 4)
