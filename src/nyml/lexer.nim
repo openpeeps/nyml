@@ -6,7 +6,7 @@
 # Released under MIT License
 # 
 
-import os, lexbase, streams, json, tables, re
+import os, lexbase, streams, json, re
 from strutils import Whitespace, `%`, replace, indent, startsWith
 
 type
@@ -21,7 +21,7 @@ type
         TK_ARRAY_BLOCK
         TK_OBJECT
         TK_COMMENT
-        TK_EOL = "End_of_input",
+        TK_EOL,
         TK_INVALID
         TK_SKIPPABLE
 
@@ -49,14 +49,30 @@ proc init*[T: typedesc[Lexer]](lex: T; fileContents: string): Lexer =
     lex.error = ""
     return lex
 
+proc setTokenMeta*[T: Lexer](lex: var T, tokenKind: TokenKind, offset:int = 0) =
+    ## Set meta data for current token
+    lex.kind = tokenKind
+    lex.startPos = lex.getColNumber(lex.bufpos)
+    inc(lex.bufpos, offset)
+
 proc nextToEOL[T: Lexer](lex: var T): tuple[pos: int, token: string] =
+    # Get entire buffer starting from given position to the end of line
+    while true:
+        case lex.buf[lex.bufpos]:
+        of NewLines: return
+        of EndOfFile: return
+        else: 
+            add lex.token, lex.buf[lex.bufpos]
+            inc lex.bufpos
+    return (pos: lex.bufpos, token: lex.token)
+
+proc skipToEOL[T: Lexer](lex: var T): int =
     # Get entire buffer starting from given position to the end of line
     while true:
         if lex.buf[lex.bufpos] in NewLines:
             return
-        add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
-    return (pos: lex.bufpos, token: lex.token)
+    return lex.bufpos
 
 proc handleNewLine[T: Lexer](lex: var T) =
     ## Handle new lines
@@ -205,18 +221,15 @@ proc handleIdent[T: Lexer](lex: var T) =
                "False", "Yes", "No", "TRUE", "FALSE", "YES", "NO": TK_BOOLEAN
             else: TK_INVALID
 
-proc setTokenMeta*[T: Lexer](lex: var T, tokenKind: TokenKind, offset:int = 0) =
-    ## Set meta data for current token
-    lex.kind = tokenKind
-    lex.startPos = lex.getColNumber(lex.bufpos)
-    inc(lex.bufpos, offset)
-
 proc getToken*[T: Lexer](lex: var T): tuple[kind: TokenKind, value: string, wsno, col, line: int] =
     ## Parsing through available tokens
     lex.kind = TK_INVALID
     setLen(lex.token, 0)
     skip lex
     case lex.buf[lex.bufpos]
+    of EndOfFile:
+        lex.startPos = lex.getColNumber(lex.bufpos)
+        lex.kind = TK_EOL
     of '#':
         lex.setTokenMeta(TK_COMMENT, lex.nextToEOL().pos)
     # of '\'': lex.handleChar()
@@ -230,9 +243,8 @@ proc getToken*[T: Lexer](lex: var T): tuple[kind: TokenKind, value: string, wsno
     of '[':
         lex.handleSequence()
     of '"', '\'': lex.handleString()
-    of EndOfFile:
-        lex.startPos = lex.getColNumber(lex.bufpos)
-        lex.kind = TK_EOL
     else:
         lex.setError("Unrecognized character $1" % [lex.token])
+    if lex.kind == TK_COMMENT:
+        return lex.getToken()
     result = (kind: lex.kind, value: lex.token, wsno: lex.whitespaces, col: lex.startPos, line: lex.lineNumber)

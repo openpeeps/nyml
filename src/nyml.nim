@@ -11,6 +11,7 @@ import nyml/[meta, lexer, utils, parser_json]
 from strutils import contains, split
 
 export Nyml, EngineParser, Document, TokenKind, parser_json.get
+export json
 
 proc parse*[T: Nyml](nymlObject: T, contents: string): Document =
     ## Parse YAML contents to JSON

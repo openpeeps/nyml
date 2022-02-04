@@ -10,6 +10,8 @@ import std/json
 from std/strutils import `%`, contains, split, parseInt, parseBool, join
 import ./lexer, ./meta
 
+export json
+
 type
     Document* = object
         json_contents: JsonNode         # Used by Y2J engine to store JSON contents
@@ -107,7 +109,7 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
     p.current = p.lexer.getToken()
     p.next    = p.lexer.getToken()
     while p.hasError() == false:
-        if p.current.kind == TK_EOL: break # end of line
+        if p.current.kind in {TK_EOL, TK_INVALID}: break # end of line
         if p.prev.kind == TK_NONE or p.prev.isLiteral():
             if p.current.wsno != 0:
                 p.setError(p.next.line, "Bad indentation for first key declaration, \"$1\"." % [p.current.value])
@@ -163,10 +165,7 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
             # else:
             #     echo "elsee"
     p.lexer.close()
-
     contents = "{$1}" % [contents]
-    echo contents
-
     if p.hasError():
         echo "\n" & p.error & "\n"
         result = Document(json_contents: %*{})
