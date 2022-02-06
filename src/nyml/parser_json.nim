@@ -206,12 +206,12 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
     var none    =  (kind: TK_NONE, value: "", wsno: 0, col: 0, line: 0)
     p.current = p.lexer.getToken()
     p.next    = p.lexer.getToken()
+    
     add p.contents, "{"
     p.walk(parentNode = none)
     add p.contents, "}"
+    
     p.lexer.close()
-
-    echo p.contents
 
     if p.hasError():
         echo "\n" & p.error & "\n"
