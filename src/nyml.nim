@@ -14,12 +14,13 @@ export Nyml, EngineParser, Document, TokenKind
 export parser_json.get, parser_json.hasErrorRules, parser_json.getErrorRules, parser_json.getErrorMessage, parser_json.getErrorsCount
 export json
 
-proc parse*[T: Nyml](nymlObject: T, contents: string, rules: seq[string]): Document =
+proc parse*[T: Nyml](nymlObject: T, contents: string, rules: seq[string] = @[]): Document =
     ## Parse YAML contents to JSON
     var nyml = nymlObject
     if nyml.engine == Y2J:
         var doc = nyml.parseToJson(contents)
-        doc.setRules(rules)
+        if rules.len != 0:
+            doc.setRules(rules)
         return doc
     raise newException(NymlException, "Stringified contents can be parsed only by Y2J engine (YAML to JSON)")
 

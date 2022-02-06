@@ -29,6 +29,8 @@ type
         lexer: Lexer
         prev, current, next: TokenTuple
         error: string
+        recursive: string
+        contents: string
 
     TokenTuple = tuple[kind: TokenKind, value: string, wsno, col, line: int]
 
@@ -147,6 +149,7 @@ proc isSame(a, b: int): bool = result = a == b
 proc isSameWith(prev, curr: TokenKind, these: set[TokenKind]): bool = prev in these and curr in these
 proc isKey(tk: TokenTuple): bool = tk.kind == TK_KEY
 proc isArray(tk: TokenTuple): bool = tk.kind == TK_ARRAY_VALUE
+proc isObject(tk: TokenTuple): bool = tk.kind == TK_KEY
 proc isSameLine(next, curr: TokenTuple): bool = curr.line == next.line
 proc isLiteral(tk: TokenTuple): bool = tk.kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}
 proc isChildOf(next, curr: TokenTuple): bool = next.wsno > curr.wsno
@@ -168,71 +171,49 @@ proc jump[T: Parser](p: var T, offset = 1) =
         p.next = p.lexer.getToken()
         inc i
 
-proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
-    var p: Parser = Parser(lexer: Lexer.init(nymlContents))
-    var contents: string
-    p.current = p.lexer.getToken()
-    p.next    = p.lexer.getToken()
+proc walk(p: var Parser, isRecursive: bool = false, parentNode: TokenTuple) =
+    var parent: TokenTuple
     while p.hasError() == false:
+        if isRecursive and not p.current.isChildOf(parent):
+            break
         if p.current.kind in {TK_EOL, TK_INVALID}: break # end of line
-        if p.prev.kind == TK_NONE or p.prev.isLiteral():
-            if p.current.wsno != 0:
-                p.setError(p.next.line, "Bad indentation for first key declaration, \"$1\"." % [p.current.value])
-                break
+        # if p.prev.kind == TK_NONE or p.prev.isLiteral():
+        #     if p.current.wsno != 0:
+        #         p.setError(p.next.line, "Bad indentation for first key declaration, \"$1\"." % [p.current.value])
+        #         break
         if p.current.isKey() and p.next.isLiteral():
             if not p.next.isSameLine(p.current):
                 p.setError(p.next.line, "Bad indentation for '$1' key declaration" % [p.current.value])
                 break
-            add contents, "\"$1\": $2," % [p.current.value, getValue(p.next)]
+            add p.contents, "\"$1\": $2," % [p.current.value, getValue(p.next)]
             jump p, 2
-            # echo p.next
-            # if p.next.isLiteral():
-            #     p.setError(p.current.line, "Unallowed mix of values assigned to the same key.")
-            #     break
-        elif p.current.isKey():
-            if not p.next.isKey():
-                p.setError(p.current.line, "Missing key declaration")
-                break
-            let parent = p.current
-            jump p
-            add contents, "\"$1\": {" % [parent.value]
-            var arrays: seq[string]
-            var arrayKey: string
-            var i = 0
-            while true:
-                if not p.current.isChildOf(parent):
-                    add contents, "},"
-                    break
-                else:
-                    while true:
-                        if not p.next.isArray(): break
-                        if p.current.isKey():
-                            add contents, "\"$1\":" % [p.current.value]
-                        arrays.add("$1" % [getValue(p.next)])
-                        inc i
-                        jump p
-                    if arrays.len != 0 and arrays.len == i:
-                        add contents, "[$1], " % [join(arrays, ", ")]
-                        i = 0
-                        arrays = @[]
-                    else:
-                        add contents, "\"$1\": $2," % [p.current.value, getValue(p.next)]
-                        jump p
-                jump p
 
-            #     let root = p.current
-            #     let second = p.next
-            #     contents[root.value] = newJObject()
-            #     contents[root.value][second.value] = newJObject()
-            #     jump p, 1
-            #     var tree = newJObject()
-            #     echo p.current
-            # else:
-            #     echo "elsee"
+            if p.current.isLiteral():
+                p.setError(p.current.line, "Unallowed mix of values assigned to the same key.")
+                break
+        elif p.current.isKey() and p.next.isKey():
+            parent = p.current
+            add p.contents, "\"$1\": {" % [p.current.value]
+            jump p
+            p.walk(isRecursive = true, parent)
+    if isRecursive:
+        add p.contents, "},"
+
+proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
+    var p: Parser = Parser(lexer: Lexer.init(nymlContents))
+    var contents: string
+    var none    =  (kind: TK_NONE, value: "", wsno: 0, col: 0, line: 0)
+    p.current = p.lexer.getToken()
+    p.next    = p.lexer.getToken()
+    add p.contents, "{"
+    p.walk(parentNode = none)
+    add p.contents, "}"
     p.lexer.close()
-    contents = "{$1}" % [contents]
+
+    echo p.contents
+
     if p.hasError():
         echo "\n" & p.error & "\n"
         result = Document(json_contents: %*{})
     else: 
-        result = Document(json_contents: parseJson(contents))
+        result = Document(json_contents: parseJson(p.contents))
