@@ -7,7 +7,7 @@
 #
 
 import std/json
-from std/strutils import `%`, contains, split, parseInt, parseBool, join
+from std/strutils import `%`, contains, split, parseInt, parseBool, parseFloat, join
 import ./lexer, ./meta
 
 export json
@@ -62,9 +62,6 @@ proc get(contents: JsonNode, key: string = ""): JsonNode =
             result = newJNull()
 
 proc get*[T: Document](doc: T, key: string = ""): JsonNode =
-    ## Browse to current document content and retrieve
-    ## values using dot annotation key.
-    ## For example: get("user.email.business")
     return get(doc.json_contents, key)
 
 proc getRuleTypeNode(nodetype: string): JsonNodeKind =
@@ -77,6 +74,16 @@ proc getRuleTypeNode(nodetype: string): JsonNodeKind =
         of "string": JString
         else: JNull
 
+proc getValueByNode(nodetype: JsonNodeKind, value: string): JsonNode = 
+    return case nodetype:
+        of JArray: newJArray()
+        of JBool: newJBool(parseBool(value))
+        of JFloat: newJFloat(parseFloat(value))
+        of JInt: newJInt(parseInt(value))
+        of JObject: newJObject()
+        of JString: newJString(value)
+        else: newJNull()
+
 proc getTypeStr(nodetype: JsonNodeKind): string = 
     return case nodetype:
         of JArray: "array"
@@ -87,34 +94,45 @@ proc getTypeStr(nodetype: JsonNodeKind): string =
         of JString: "string"
         else: "null"    
 
-proc parseRuleString(r: string): tuple[key: string, required: bool, expectType: JsonNodeKind] =
+proc parseRuleString(r: string): tuple[key: string, req: bool, expect: JsonNodeKind, default: JsonNode] =
     let
         rule = r.split("*")
         isRequired = if rule.len == 1: false else: true
     var
-        fieldKey, fieldType: string
+        fieldKey, fieldType, defaultVal: string
         ruleStruct: seq[string]
     if isRequired:
         fieldKey = rule[0]
         fieldType = rule[1].split(":")[1]
+        if fieldType.contains("|"):
+            raise newException(NymlException, "Required fields cannot hold a default value")
     else:
         ruleStruct = rule[0].split(":")
         fieldKey = ruleStruct[0]
         fieldType = ruleStruct[1]
-
+        if fieldType.contains("|"):
+            ruleStruct = fieldType.split("|")
+            fieldType = ruleStruct[0]
+            if fieldType in ["array", "object", "string"]:
+                raise newException(NymlException, "\"$1\" fields cannot hold a default value" % [fieldType])
+            defaultVal = ruleStruct[1]
     if fieldType notin ["array", "bool", "float", "int", "object", "string", "null"]:
-        raise newException(NymlException, "\"$1\" is not valid value type")
+        raise newException(NymlException, "\"$1\" is not valid typed value")
 
-    return (key: fieldKey, required: isRequired, expectType: getRuleTypeNode(fieldType))
+    let jsonNodeType = getRuleTypeNode(fieldType)
+    let defaultJsonNodeValue = getValueByNode(jsonNodeType, defaultVal)
+    return (key: fieldKey, req: isRequired, expect: jsonNodeType, default: defaultJsonNodeValue)
 
 proc setRules*[T: Document](doc: var T, rules: seq[string]) =
     for r in rules:
-        let
-            rule = parseRuleString(r)
-            field: JsonNode = doc.get(rule.key)
-            fieldType: JsonNodeKind = rule.expectType
-        if field.kind != fieldType:
-            doc.errors.add(DocumentError(msg: "\"$1\" field is type of \"$2\", \"$3\" value given" % [rule.key, getTypeStr(fieldType), getTypeStr(field.kind)]))
+        let rule = parseRuleString(r)
+        var fieldVal: JsonNode = doc.get(rule.key)
+        var fieldType: JsonNodeKind = rule.expect
+        if fieldVal.kind == JNull:
+            fieldVal = rule.default                 # get default value, if any
+            doc.json_contents[rule.key] = fieldVal  # TODO create macro for set data with dot annotations
+        if fieldVal.kind != fieldType:
+            doc.errors.add(DocumentError(msg: "\"$1\" field is type of \"$2\", \"$3\" value given" % [rule.key, getTypeStr(fieldType), getTypeStr(fieldVal.kind)]))
             inc doc.getTotalErrors
     if doc.errors.len != 0: doc.has_errors = true
 
@@ -122,23 +140,6 @@ proc getErrorMessage*[T: DocumentError](docError: T): string = docError.msg
 proc hasErrorRules*[T: Document](doc: T): bool = doc.has_errors
 proc getErrorRules*[T: Document](doc: T): seq[DocumentError] = doc.errors
 proc getErrorsCount*[T: Document](doc: T): int = doc.getTotalErrors
-
-proc putIt(contents: JsonNode, key: string, value: JsonNode, isLastCall=false): JsonNode =
-    # Kinda nasty setter that creates json levels recursively
-    if key.contains("."):
-        var i = 0
-        var last = false
-        var k = key.split(".", maxsplit=1)
-        var tree = newJObject()
-        while true:
-            try:
-                tree[k[i]] = tree.putIt(k[i + 1], value)
-                inc i
-            except IndexDefect:
-                last = true
-                break
-        return tree
-    return %*{key: value}
 
 proc setError[T: Parser](p: var T, lineno: int, msg: string) = p.error = "Error ($2:$3): $1" % [msg, $lineno, "13"]
 proc hasError[T: Parser](p: var T): bool = p.error.len != 0
