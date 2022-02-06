@@ -13,9 +13,17 @@ import ./lexer, ./meta
 export json
 
 type
+
+    DocumentError = object
+        msg: string
+
     Document* = object
         json_contents: JsonNode         # Used by Y2J engine to store JSON contents
         yaml_contents: string           # Used by J2Y engine to store YAML contents
+        rules: seq[string]              # Used to validate the parsed JSON
+        has_errors: bool
+        getTotalErrors: int
+        errors: seq[DocumentError]
 
     Parser* = object
         lexer: Lexer
@@ -58,6 +66,62 @@ proc get*[T: Document](doc: T, key: string = ""): JsonNode =
     ## values using dot annotation key.
     ## For example: get("user.email.business")
     return get(doc.json_contents, key)
+
+proc getRuleTypeNode(nodetype: string): JsonNodeKind =
+    return case nodetype:
+        of "array": JArray
+        of "bool": JBool
+        of "float": JFloat
+        of "int": JInt
+        of "object": JObject
+        of "string": JString
+        else: JNull
+
+proc getTypeStr(nodetype: JsonNodeKind): string = 
+    return case nodetype:
+        of JArray: "array"
+        of JBool: "bool"
+        of JFloat: "float"
+        of JInt: "int"
+        of JObject: "object"
+        of JString: "string"
+        else: "null"    
+
+proc parseRuleString(r: string): tuple[key: string, required: bool, expectType: JsonNodeKind] =
+    let
+        rule = r.split("*")
+        isRequired = if rule.len == 1: false else: true
+    var
+        fieldKey, fieldType: string
+        ruleStruct: seq[string]
+    if isRequired:
+        fieldKey = rule[0]
+        fieldType = rule[1].split(":")[1]
+    else:
+        ruleStruct = rule[0].split(":")
+        fieldKey = ruleStruct[0]
+        fieldType = ruleStruct[1]
+
+    if fieldType notin ["array", "bool", "float", "int", "object", "string", "null"]:
+        raise newException(NymlException, "\"$1\" is not valid value type")
+
+    return (key: fieldKey, required: isRequired, expectType: getRuleTypeNode(fieldType))
+
+proc setRules*[T: Document](doc: var T, rules: seq[string]) =
+    for r in rules:
+        let
+            rule = parseRuleString(r)
+            field: JsonNode = doc.get(rule.key)
+            fieldType: JsonNodeKind = rule.expectType
+        if field.kind != fieldType:
+            doc.errors.add(DocumentError(msg: "\"$1\" field is type of \"$2\", \"$3\" value given" % [rule.key, getTypeStr(fieldType), getTypeStr(field.kind)]))
+            inc doc.getTotalErrors
+    if doc.errors.len != 0: doc.has_errors = true
+
+proc getErrorMessage*[T: DocumentError](docError: T): string = docError.msg
+proc hasErrorRules*[T: Document](doc: T): bool = doc.has_errors
+proc getErrorRules*[T: Document](doc: T): seq[DocumentError] = doc.errors
+proc getErrorsCount*[T: Document](doc: T): int = doc.getTotalErrors
 
 proc putIt(contents: JsonNode, key: string, value: JsonNode, isLastCall=false): JsonNode =
     # Kinda nasty setter that creates json levels recursively
@@ -118,7 +182,7 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
             if not p.next.isSameLine(p.current):
                 p.setError(p.next.line, "Bad indentation for '$1' key declaration" % [p.current.value])
                 break
-            add contents, "\"$1\": \"$2\"," % [p.current.value, p.next.value]
+            add contents, "\"$1\": $2," % [p.current.value, getValue(p.next)]
             jump p, 2
             # echo p.next
             # if p.next.isLiteral():

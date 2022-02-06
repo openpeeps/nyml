@@ -10,17 +10,18 @@ import json
 import nyml/[meta, lexer, utils, parser_json]
 from strutils import contains, split
 
-export Nyml, EngineParser, Document, TokenKind, parser_json.get
+export Nyml, EngineParser, Document, TokenKind
+export parser_json.get, parser_json.hasErrorRules, parser_json.getErrorRules, parser_json.getErrorMessage, parser_json.getErrorsCount
 export json
 
-proc parse*[T: Nyml](nymlObject: T, contents: string): Document =
+proc parse*[T: Nyml](nymlObject: T, contents: string, rules: seq[string]): Document =
     ## Parse YAML contents to JSON
     var nyml = nymlObject
     if nyml.engine == Y2J:
-        return nyml.parseToJson(contents)
-    
-    raise newException(NymlException,
-        "Stringified contents can be parsed only by Y2J engine (YAML to JSON)")
+        var doc = nyml.parseToJson(contents)
+        doc.setRules(rules)
+        return doc
+    raise newException(NymlException, "Stringified contents can be parsed only by Y2J engine (YAML to JSON)")
 
 proc parse*[T: Nyml](nyml: T, contents: JsonNode): Document =
     ## Parse JsonNode contents to YAML
