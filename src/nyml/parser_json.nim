@@ -29,8 +29,8 @@ type
         lexer: Lexer
         prev, current, next: TokenTuple
         error: string
-        recursive: string
-        contents: string
+        parents: seq[TokenTuple]        # TODO store all parents in a sequence so it can be removed one by one after resolved
+        contents: string                # Holds stringified JSON contents
 
     TokenTuple = tuple[kind: TokenKind, value: string, wsno, col, line: int]
 
@@ -175,7 +175,8 @@ proc walk(p: var Parser, isRecursive: bool = false, parentNode: TokenTuple) =
     var parent: TokenTuple
     while p.hasError() == false:
         if isRecursive and not p.current.isChildOf(parent):
-            break
+            add p.contents, "},"
+            return
         if p.current.kind in {TK_EOL, TK_INVALID}: break # end of line
         # if p.prev.kind == TK_NONE or p.prev.isLiteral():
         #     if p.current.wsno != 0:
