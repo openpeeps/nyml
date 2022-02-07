@@ -8,6 +8,7 @@
 
 import std/json
 from std/strutils import `%`, contains, split, parseInt, parseBool, parseFloat, join
+from std/sequtils import delete
 import ./lexer, ./meta
 
 export json
@@ -29,7 +30,7 @@ type
         lexer: Lexer
         prev, current, next: TokenTuple
         error: string
-        parents: seq[TokenTuple]        # TODO store all parents in a sequence so it can be removed one by one after resolved
+        parents: seq[TokenTuple]        # parents collected while in tree
         contents: string                # Holds stringified JSON contents
 
     TokenTuple = tuple[kind: TokenKind, value: string, wsno, col, line: int]
@@ -131,8 +132,8 @@ proc setRules*[T: Document](doc: var T, rules: seq[string]) =
         var fieldVal: JsonNode = doc.get(rule.key)
         var fieldType: JsonNodeKind = rule.expect
         if fieldVal.kind == JNull:
-            fieldVal = rule.default                 # get default value, if any
-            doc.json_contents[rule.key] = fieldVal  # TODO create macro for set data with dot annotations
+            fieldVal = rule.default                     # get default value, if any
+            doc.json_contents[rule.key] = fieldVal      # TODO create macro set data with dot annotations
         if fieldVal.kind != fieldType:
             doc.errors.add(DocumentError(msg: "\"$1\" field is type of \"$2\", \"$3\" value given" % [rule.key, getTypeStr(fieldType), getTypeStr(fieldVal.kind)]))
             inc doc.getTotalErrors
@@ -171,17 +172,15 @@ proc jump[T: Parser](p: var T, offset = 1) =
         p.next = p.lexer.getToken()
         inc i
 
-proc walk(p: var Parser, isRecursive: bool = false, parentNode: TokenTuple) =
-    var parent: TokenTuple
+proc walk(p: var Parser, isRecursive: bool = false) =
+    # var parent: TokenTuple
     while p.hasError() == false:
-        if isRecursive and not p.current.isChildOf(parent):
+        if isRecursive and not p.current.isChildOf(p.parents[^1]):
             add p.contents, "},"
+            var pos = if p.parents.len == 0: 0 else: p.parents.len - 1
+            p.parents.delete(pos)
             return
-        if p.current.kind in {TK_EOL, TK_INVALID}: break # end of line
-        # if p.prev.kind == TK_NONE or p.prev.isLiteral():
-        #     if p.current.wsno != 0:
-        #         p.setError(p.next.line, "Bad indentation for first key declaration, \"$1\"." % [p.current.value])
-        #         break
+        if p.current.kind in {TK_EOL, TK_INVALID}: break    # end of line
         if p.current.isKey() and p.next.isLiteral():
             if not p.next.isSameLine(p.current):
                 p.setError(p.next.line, "Bad indentation for '$1' key declaration" % [p.current.value])
@@ -193,22 +192,21 @@ proc walk(p: var Parser, isRecursive: bool = false, parentNode: TokenTuple) =
                 p.setError(p.current.line, "Unallowed mix of values assigned to the same key.")
                 break
         elif p.current.isKey() and p.next.isKey():
-            parent = p.current
+            p.parents.add(p.current)
             add p.contents, "\"$1\": {" % [p.current.value]
             jump p
-            p.walk(isRecursive = true, parent)
+            p.walk(isRecursive = true)
     if isRecursive:
         add p.contents, "},"
 
 proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
     var p: Parser = Parser(lexer: Lexer.init(nymlContents))
     var contents: string
-    var none    =  (kind: TK_NONE, value: "", wsno: 0, col: 0, line: 0)
     p.current = p.lexer.getToken()
     p.next    = p.lexer.getToken()
     
     add p.contents, "{"
-    p.walk(parentNode = none)
+    p.walk()
     add p.contents, "}"
     
     p.lexer.close()
