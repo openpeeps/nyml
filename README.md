@@ -66,8 +66,12 @@ echo doc.get("name").getStr             # Madam
 echo doc.get("assets.source")           # ./dist/assets/*
 ```
 
+### Rules & Validators
+_documentation_
+
 ## Roadmap
-_to add roadmap_
+- [ ] Add tests
+- [ ] Add more examples
 
 ### ❤ Contributions
 If you like this project you can contribute to Nyml project by opening new issues, fixing bugs, contribute with code, ideas and you can even [donate via PayPal address](https://www.paypal.com/donate/?hosted_button_id=RJK3ZTDWPL55C) 🥰
