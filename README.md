@@ -49,11 +49,11 @@ console:
 </details>
 
 ```nim
-let doc = Nyml(engine: Y2J).parse(readFile("sample.yml",
+let doc = Nyml(engine: Y2J).parse(readFile("sample.yml"),
             rules = @["name*:string", "path*:string", "port:int|1234",
                     "logs:bool|false","templates*:object", "templates.layouts*:string",
                     "templates.views*:string", "templates.partials*:string"
-            ])),
+            ]),
 
 if doc.hasErrorRules():
     let count = doc.getErrorsCount()
