@@ -1,10 +1,8 @@
-# 
-# A simple YAML-1.0 parser to JsonNode and from JSON back to YAML.
+# A stupid simple YAML-like implementation in Nim language. From YML to JsonNode
 # https://github.com/openpeep/nyml
 # 
 # Copyright 2021 George Lemon from OpenPeep
 # Released under MIT License
-#
 
 import std/json
 from std/strutils import `%`, contains, split, parseInt, parseBool, parseFloat, join
@@ -33,6 +31,9 @@ type
         contents: string                # Holds stringified JSON contents
 
     TokenTuple = tuple[kind: TokenKind, value: string, wsno, col, line: int]
+
+    # TODO
+    # MemoryCheck table to handle all keys and prevent duplicates
 
 proc getValue[T: TokenTuple](tk: T): string =
     return case tk.kind:
@@ -182,6 +183,7 @@ proc walk(p: var Parser, isRecursive: bool = false) =
             return
         if p.current.kind in {TK_EOL, TK_INVALID}: break    # end of line
         if p.current.isKey() and p.next.isLiteral():
+            # Collect literals
             if not p.next.isSameLine(p.current):
                 p.setError(p.next.line, "Bad indentation for '$1' key declaration" % [p.current.value])
                 break
@@ -192,18 +194,21 @@ proc walk(p: var Parser, isRecursive: bool = false) =
                 p.setError(p.current.line, "Unallowed mix of values assigned to the same key.")
                 break
         elif p.current.isKey() and p.next.isKey():
+            # Collect objects
             p.parents.add(p.current)
             add p.contents, "\"$1\": {" % [p.current.value]
             jump p
             p.walk(isRecursive = true)
         elif p.current.isKey() and p.next.isArrayValue():
+            # Collect array values
             add p.contents, "\"$1\": [" % [p.current.value]
             jump p
             while true:
+                # TODO handle multi dimensional arrays
                 if p.current.isArrayValue():
                     jump p
                     continue
-                if not p.current.isLiteral(): break                 # TODO Handle objects as array values
+                if not p.current.isLiteral(): break
                 add p.contents, "$1," % [getValue(p.current)]
                 jump p
             add p.contents, "],"
@@ -223,7 +228,7 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
     p.lexer.close()
 
     if p.hasError():
-        echo "\n" & p.error & "\n"
+        echo "\n" & p.error & "\n"              # TODO make parser errors handler public
         result = Document(json_contents: %*{})
     else: 
         result = Document(json_contents: parseJson(p.contents))
