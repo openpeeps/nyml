@@ -2,7 +2,7 @@
 
 version       = "0.1.0"
 author        = "George Lemon"
-description   = "A new awesome nimble package"
+description   = "A stupid simple YAML-like implementation in Nim language. From YML to JsonNode"
 license       = "MIT"
 srcDir        = "src"
 bin           = @["nyml"]
