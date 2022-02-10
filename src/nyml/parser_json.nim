@@ -30,8 +30,6 @@ type
         parents: seq[TokenTuple]        # parents collected while in tree
         contents: string                # Holds stringified JSON contents
 
-    TokenTuple = tuple[kind: TokenKind, value: string, wsno, col, line: int]
-
     # TODO
     # MemoryCheck table to handle all keys and prevent duplicates
 
@@ -175,7 +173,7 @@ proc jump[T: Parser](p: var T, offset = 1) =
 
 proc walk(p: var Parser, isRecursive: bool = false) =
     # var parent: TokenTuple
-    while p.hasError() == false:
+    while p.hasError() == false and p.lexer.hasError() == false:
         if isRecursive and not p.current.isChildOf(p.parents[^1]):
             add p.contents, "},"
             var pos = if p.parents.len == 0: 0 else: p.parents.len - 1
@@ -224,11 +222,11 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
     add p.contents, "{"
     p.walk()
     add p.contents, "}"
-    
-    p.lexer.close()
 
-    if p.hasError():
-        echo "\n" & p.error & "\n"              # TODO make parser errors handler public
+    if p.hasError() or p.lexer.hasError():
+        let error: string = if p.error.len == 0: p.lexer.error else: p.error
+        echo "\n" & error & "\n"              
         result = Document(json_contents: %*{})
-    else: 
+    else:
         result = Document(json_contents: parseJson(p.contents))
+    p.lexer.close()

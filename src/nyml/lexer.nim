@@ -31,13 +31,14 @@ type
         startPos*: int
         whitespaces: int
 
+    TokenTuple* = tuple[kind: TokenKind, value: string, wsno, col, line: int]
 
 template setError(l: var Lexer; err: string): untyped =
     l.kind = TK_INVALID
     if l.error.len == 0:
         l.error = err
- 
-proc hasError[T: Lexer](self: T): bool = self.error.len > 0
+
+proc hasError*[T: Lexer](lex: T): bool = lex.error.len != 0
 
 proc init*[T: typedesc[Lexer]](lex: T; fileContents: string): Lexer =
     ## Initialize a new BaseLexer instance with given Stream
@@ -113,26 +114,6 @@ proc handleSpecial[T: Lexer](lex: var T): char =
         lex.setError("Unknown escape sequence: '\\" & lex.buf[lex.bufpos] & "'")
         result = '\0'
  
-proc handleChar[T: Lexer](lex: var T) =
-    assert lex.buf[lex.bufpos] == '\''
-    lex.startPos = lex.getColNumber(lex.bufpos)
-    lex.kind = TK_INVALID
-    inc lex.bufpos
-    if lex.buf[lex.bufpos] == '\\':
-        lex.token = $ord(lex.handleSpecial())
-        if lex.hasError(): return
-    elif lex.buf[lex.bufpos] == '\'':
-        lex.setError("Empty character constant")
-        return
-    else:
-        lex.token = $ord(lex.buf[lex.bufpos])
-        inc lex.bufpos
-    if lex.buf[lex.bufpos] == '\'':
-        lex.kind = TK_INTEGER
-        inc lex.bufpos
-    else:
-        lex.setError("Multi-character constant")
- 
 proc handleString[T: Lexer](lex: var T) =
     ## Handle string values wrapped in single or double quotes
     lex.startPos = lex.getColNumber(lex.bufpos)
@@ -168,10 +149,8 @@ proc handleSequence[T: Lexer](lex: var T) =
             discard lex.handleSpecial()
             if lex.hasError(): return
         of ']':
-            lex.kind = TK_ARRAY_BLOCK
-            add lex.token, ']'
-            inc lex.bufpos
-            break
+            lex.setError("Needs implementation")
+            return
         of NewLines:
             lex.setError(errorMessage % ["EOL"])
             return
@@ -221,7 +200,7 @@ proc handleIdent[T: Lexer](lex: var T) =
                "False", "Yes", "No", "TRUE", "FALSE", "YES", "NO": TK_BOOLEAN
             else: TK_INVALID
 
-proc getToken*[T: Lexer](lex: var T): tuple[kind: TokenKind, value: string, wsno, col, line: int] =
+proc getToken*[T: Lexer](lex: var T): TokenTuple =
     ## Parsing through available tokens
     lex.kind = TK_INVALID
     setLen(lex.token, 0)
@@ -232,19 +211,13 @@ proc getToken*[T: Lexer](lex: var T): tuple[kind: TokenKind, value: string, wsno
         lex.kind = TK_EOL
     of '#':
         lex.setTokenMeta(TK_COMMENT, lex.nextToEOL().pos)
-    # of '\'': lex.handleChar()
     of '0'..'9': lex.handleNumber()
     of 'a'..'z', 'A'..'Z', ':', '_': lex.handleIdent()
     of '-': lex.setTokenMeta(TK_ARRAY_ITEM, 1)
-        # lex.bufpos = lex.bufpos + 1
-        # skip lex
-        # lex.handleString()
-        # lex.kind = TK_ARRAY_VALUE
     of '[':
         lex.handleSequence()
     of '"', '\'': lex.handleString()
     else:
         lex.setError("Unrecognized character $1" % [lex.token])
-    if lex.kind == TK_COMMENT:
-        return lex.getToken()
+    if lex.kind == TK_COMMENT: result = lex.getToken()
     result = (kind: lex.kind, value: lex.token, wsno: lex.whitespaces, col: lex.startPos, line: lex.lineNumber)
