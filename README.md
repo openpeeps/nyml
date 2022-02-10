@@ -9,7 +9,7 @@ _Nyml has no serialization, tags, indicators or any weird things. In fact, Nyml 
 _If you need a YAML 1.2 compatible library go with [flyx's NimYAML](https://github.com/flyx/NimYAML)._
 
 ## 😍 Key Features
-- [x] `integer`, `string`, `boolean`, `array`, `objects`
+- [x] `integer`, `string`, `boolean`, `array`, `object`
 - [x] `GET` access using `dot` annotations
 - [x] Rules and Validator
 - [x] Open Source | `MIT` License
@@ -31,16 +31,16 @@ The following example is taken from [Madam's Configurator](https://github.com/op
 name: "Madam"
 path: "./example"
 port: 1230
+
 templates:
     views: "views"
     layouts: "layouts"
     partials: "partials"
-routes:
-    get:
-        about: "about.html"
+
 assets:
     source: "./dist/assets/*"
     public: "/assets"
+
 console:
     logger: true                    # Enable http request logger
     clear: true                     # Clear previous console output on request
@@ -50,24 +50,43 @@ console:
 
 ```nim
 let doc = Nyml(engine: Y2J).parse(readFile("sample.yml"),
-            rules = @["name*:string", "path*:string", "port:int|1234",
-                    "logs:bool|false","templates*:object", "templates.layouts*:string",
-                    "templates.views*:string", "templates.partials*:string"
-            ]),
+            rules = @[
+                "name*:string",
+                "path*:string",
+                "port:int|1234",
+                
+                "templates*:object",
+                "templates.layouts*:string",
+                "templates.views*:string",
+                "templates.partials*:string"
+                
+                "console:object"
+                "console.logger:bool|true"
+                "console.clear:bool|true"
+            ])
 
 if doc.hasErrorRules():
     let count = doc.getErrorsCount()
     let errorWord = if count == 1: "error" else: "errors"
     echo "👉 Found $1 $2 in your Madam configuration:" % [$count, errorWord]
-    for key, err in doc.getErrorRules().pairs():
-        echo "  • " & err.getErrorMessage()
-
-echo doc.get("name").getStr             # Madam
-echo doc.get("assets.source")           # ./dist/assets/*
+    for err in doc.getErrorRules():
+        echo err.getErrorMessage()
+else:
+    echo doc.get("name").getStr                     # Madam
+    echo doc.get("assets.source").getStr            # ./dist/assets/*
 ```
 
 ### Rules & Validators
-_documentation_
+_need tests_
+
+Write your own rules as a `seq[string]`. The rule syntax is very simple, you got `field_name*:string`.
+
+Note that `field_name` should point to a `field_name` key in your `.yml` file.
+
+When followed by `*` it becomes a required field. Then you have the field `type`.
+
+Now, let's take for example `port:int|1234`, which is an `optional` field of `int` type, with a `default` value `1234`.
+
 
 ## Roadmap
 - [ ] Add tests
