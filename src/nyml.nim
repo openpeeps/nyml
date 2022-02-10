@@ -7,7 +7,7 @@
 # 
 
 import json
-import nyml/[meta, lexer, utils, parser_json]
+import nyml/[meta, lexer, parser_json]
 from strutils import contains, split
 
 export Nyml, EngineParser, Document, TokenKind
