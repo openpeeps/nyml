@@ -13,17 +13,17 @@ type
     TokenKind* = enum
         TK_NONE
         TK_KEY
+        TK_NULL
         TK_INTEGER
         TK_STRING
         TK_BOOLEAN
         TK_ARRAY
-        TK_ARRAY_VALUE
+        TK_ARRAY_ITEM
         TK_ARRAY_BLOCK
         TK_OBJECT
         TK_COMMENT
         TK_EOL,
         TK_INVALID
-        TK_SKIPPABLE
 
     Lexer* = object of BaseLexer
         kind*: TokenKind
@@ -143,7 +143,7 @@ proc handleString[T: Lexer](lex: var T) =
         of '\\':
             discard lex.handleSpecial()
             if lex.hasError(): return
-        of '"':
+        of '"', '\'':
             lex.kind = TK_STRING
             inc lex.bufpos
             break
@@ -235,11 +235,11 @@ proc getToken*[T: Lexer](lex: var T): tuple[kind: TokenKind, value: string, wsno
     # of '\'': lex.handleChar()
     of '0'..'9': lex.handleNumber()
     of 'a'..'z', 'A'..'Z', ':', '_': lex.handleIdent()
-    of '-':
-        lex.bufpos = lex.bufpos + 1
-        skip lex
-        lex.handleString()
-        lex.kind = TK_ARRAY_VALUE
+    of '-': lex.setTokenMeta(TK_ARRAY_ITEM, 1)
+        # lex.bufpos = lex.bufpos + 1
+        # skip lex
+        # lex.handleString()
+        # lex.kind = TK_ARRAY_VALUE
     of '[':
         lex.handleSequence()
     of '"', '\'': lex.handleString()

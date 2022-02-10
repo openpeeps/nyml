@@ -8,9 +8,8 @@
 
 import std/json
 from std/strutils import `%`, contains, split, parseInt, parseBool, parseFloat, join
-from std/sequtils import delete
+from ./utils import parseBoolValueStr
 import ./lexer, ./meta
-
 export json
 
 type
@@ -37,9 +36,10 @@ type
 
 proc getValue[T: TokenTuple](tk: T): string =
     return case tk.kind:
-        of TK_INTEGER, TK_BOOLEAN: tk.value
+        of TK_INTEGER: tk.value
+        of TK_BOOLEAN: parseBoolValueStr(tk.value)
         of TK_STRING: "\"" & tk.value & "\""
-        else: ""
+        else: "" # TODO raise exception or handle it | Handle null values
 
 proc get(contents: JsonNode, key: string = ""): JsonNode = 
     ## Access data from current document using dot annotations.
@@ -149,7 +149,7 @@ proc hasError[T: Parser](p: var T): bool = p.error.len != 0
 proc isSame(a, b: int): bool = result = a == b
 proc isSameWith(prev, curr: TokenKind, these: set[TokenKind]): bool = prev in these and curr in these
 proc isKey(tk: TokenTuple): bool = tk.kind == TK_KEY
-proc isArray(tk: TokenTuple): bool = tk.kind == TK_ARRAY_VALUE
+proc isArrayValue(tk: TokenTuple): bool = tk.kind == TK_ARRAY_ITEM
 proc isObject(tk: TokenTuple): bool = tk.kind == TK_KEY
 proc isSameLine(next, curr: TokenTuple): bool = curr.line == next.line
 proc isLiteral(tk: TokenTuple): bool = tk.kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}
@@ -196,12 +196,23 @@ proc walk(p: var Parser, isRecursive: bool = false) =
             add p.contents, "\"$1\": {" % [p.current.value]
             jump p
             p.walk(isRecursive = true)
+        elif p.current.isKey() and p.next.isArrayValue():
+            add p.contents, "\"$1\": [" % [p.current.value]
+            jump p
+            while true:
+                if p.current.isArrayValue():
+                    jump p
+                    continue
+                if not p.current.isLiteral(): break                 # TODO Handle objects as array values
+                add p.contents, "$1," % [getValue(p.current)]
+                jump p
+            add p.contents, "],"
+
     if isRecursive:
         add p.contents, "},"
 
 proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
     var p: Parser = Parser(lexer: Lexer.init(nymlContents))
-    var contents: string
     p.current = p.lexer.getToken()
     p.next    = p.lexer.getToken()
     

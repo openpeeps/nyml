@@ -14,6 +14,12 @@ proc cutLast*(text: string, cuts=2): string =
 proc parseBoolValue*(v: string): bool =
     # Try parse given string value into a bool
     case v:
-    of "TRUE", "True", "true", "YES", "Yes", "yes": result = true
-    of "FALSE", "False", "false", "NO", "No", "no": result = false
+    of "TRUE", "True", "true", "YES", "Yes", "yes", "y": result = true
+    of "FALSE", "False", "false", "NO", "No", "no", "n": result = false
     else: raise newException(ValueError, "cannot interpret as a bool: " & v)
+
+proc parseBoolValueStr*(v: string): string =
+    case v:
+    of "TRUE", "True", "true", "YES", "Yes", "yes", "y": result = "true"
+    of "FALSE", "False", "false", "NO", "No", "no", "n": result = "true"
+    else: raise newException(ValueError, "cannot interpret as a bool: " & v)    
