@@ -52,11 +52,13 @@ proc init*[T: typedesc[Lexer]](lex: T; fileContents: string): Lexer =
     lex.error = ""
     return lex
 
-proc setTokenMeta*[T: Lexer](lex: var T, tokenKind: TokenKind, offset:int = 0) =
+proc setToken*[T: Lexer](lex: var T, tokenKind: TokenKind, offset:int = 0) =
     ## Set meta data for current token
     lex.kind = tokenKind
     lex.startPos = lex.getColNumber(lex.bufpos)
     inc(lex.bufpos, offset)
+
+proc getToken*[T: Lexer](lex: var T): TokenTuple
 
 proc nextToEOL[T: Lexer](lex: var T): tuple[pos: int, token: string] =
     # Get entire buffer starting from given position to the end of line
@@ -141,9 +143,10 @@ proc handleString[T: Lexer](lex: var T) =
             inc lex.bufpos
 
 proc handleSequence[T: Lexer](lex: var T) =
+    skip lex
     lex.startPos = lex.getColNumber(lex.bufpos)
-    lex.token = "["
     inc lex.bufpos
+    
     var errorMessage = "$1 reached before closing the array"
     while true:
         case lex.buf[lex.bufpos]
@@ -151,17 +154,23 @@ proc handleSequence[T: Lexer](lex: var T) =
             discard lex.handleSpecial()
             if lex.hasError(): return
         of ']':
-            lex.setError("Needs implementation")
-            return
+            inc lex.bufpos
+            # lex.kind = TK_ARRAY_ITEM
+            break
         of NewLines:
             lex.setError(errorMessage % ["EOL"])
             return
         of EndOfFile:
             lex.setError(errorMessage % ["EOF"])
             return
+        of '[':
+            lex.setError("Invalid multi-dimensional array using square brackets")
+            return
         else:
-            add lex.token, lex.buf[lex.bufpos]
-            inc lex.bufpos
+            discard lex.getToken()
+            # echo lex.buf[lex.bufpos]
+            # add lex.token, lex.buf[lex.bufpos]
+            # inc lex.bufpos
 
 proc handleNumber[T: Lexer](lex: var T) =
     lex.startPos = lex.getColNumber(lex.bufpos)
@@ -179,7 +188,7 @@ proc handleNumber[T: Lexer](lex: var T) =
             lex.setError("Invalid number")
             return
         else:
-            lex.setTokenMeta(TK_INTEGER)
+            lex.setToken(TK_INTEGER)
             break
 
 proc handleIdent[T: Lexer](lex: var T) =
@@ -188,7 +197,7 @@ proc handleIdent[T: Lexer](lex: var T) =
     lex.startPos = lex.getColNumber(lex.bufpos)
     setLen(lex.token, 0)
     while true:
-        if lex.buf[lex.bufpos] in {'a'..'z', 'A'..'Z', '0'..'9', '_', ':', '/', '-'}:
+        if lex.buf[lex.bufpos] in {'a'..'z', 'A'..'Z', '0'..'9', '_', ':', '/', '\\', '-'}:
             add lex.token, lex.buf[lex.bufpos]
             inc lex.bufpos
         else: break
@@ -196,7 +205,7 @@ proc handleIdent[T: Lexer](lex: var T) =
     # if lex.token =~ re"\w+\:":
     if lex.token =~ re"^[^\s!?.*#|]+\:":
         lex.token = lex.token.replace(":", "")      # Remove punctuation character
-        lex.setTokenMeta(TK_KEY)
+        lex.setToken(TK_KEY)
     else:
         lex.kind = case lex.token
             of "true", "false", "yes", "no", "y", "n", "True",
@@ -212,15 +221,16 @@ proc getToken*[T: Lexer](lex: var T): TokenTuple =
     of EndOfFile:
         lex.startPos = lex.getColNumber(lex.bufpos)
         lex.kind = TK_EOL
-    of '#':
-        lex.setTokenMeta(TK_COMMENT, lex.nextToEOL().pos)
+    of '#': lex.setToken(TK_COMMENT, lex.nextToEOL().pos)
     of '0'..'9': lex.handleNumber()
     of 'a'..'z', 'A'..'Z', ':', '_': lex.handleIdent()
-    of '-': lex.setTokenMeta(TK_ARRAY_ITEM, 1)
-    of '[':
-        lex.handleSequence()
+    of '-': lex.setToken(TK_ARRAY_ITEM, 1)
+    of '[': lex.handleSequence()
     of '"', '\'': lex.handleString()
     else:
-        lex.setError("Unrecognized character $1" % [lex.token])
+        echo lex.token
+        lex.setError("Unexpected character \"$1\"" % [ $(lex.buf[lex.bufpos]) ])
+    
     if lex.kind == TK_COMMENT: result = lex.getToken()
     result = (kind: lex.kind, value: lex.token, wsno: lex.whitespaces, col: lex.startPos, line: lex.lineNumber)
+

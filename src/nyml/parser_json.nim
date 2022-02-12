@@ -154,10 +154,6 @@ proc isSameLine(next, curr: TokenTuple): bool = curr.line == next.line
 proc isLiteral(tk: TokenTuple): bool = tk.kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}
 proc isChildOf(next, curr: TokenTuple): bool = next.wsno > curr.wsno
 
-proc isInlineArray(tk: TokenKind): bool =
-    # Determine if current token is type of TK_ARRAY
-    return tk == TK_ARRAY_BLOCK
-
 proc isValue(): bool =
     # Determine if current token is kind of
     # TK_STRING, TK_INTEGER, TK_BOOLEAN or TK_ARRAY
@@ -199,11 +195,15 @@ proc walk(p: var Parser, isRecursive: bool = false) =
             p.walk(isRecursive = true)
         elif p.current.isKey() and p.next.isArrayValue():
             # Collect array values
-            add p.contents, "\"$1\": [" % [p.current.value]
+            let keyToken = p.current
+            add p.contents, "\"$1\": [" % [keyToken.value]
             jump p
             while true:
                 # TODO handle multi dimensional arrays
                 if p.current.isArrayValue():
+                    if p.current.line == keyToken.line or
+                    p.current.line < p.next.line:
+                        p.setError((line: p.current.line, col: p.current.col), "Bad identation for hyphen-based array item")
                     jump p
                     continue
                 if not p.current.isLiteral(): break
