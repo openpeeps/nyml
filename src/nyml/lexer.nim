@@ -22,6 +22,8 @@ type
         TK_ARRAY_BLOCK
         TK_OBJECT
         TK_COMMENT
+        TK_SLASH
+        TK_MINUS
         TK_EOL,
         TK_INVALID
 
@@ -186,12 +188,13 @@ proc handleIdent[T: Lexer](lex: var T) =
     lex.startPos = lex.getColNumber(lex.bufpos)
     setLen(lex.token, 0)
     while true:
-        if lex.buf[lex.bufpos] in {'a'..'z', 'A'..'Z', '0'..'9', '_', ':'}:
+        if lex.buf[lex.bufpos] in {'a'..'z', 'A'..'Z', '0'..'9', '_', ':', '/', '-'}:
             add lex.token, lex.buf[lex.bufpos]
             inc lex.bufpos
         else: break
 
-    if lex.token =~ re"\w+\:":
+    # if lex.token =~ re"\w+\:":
+    if lex.token =~ re"^[^\s!?.*#|]+\:":
         lex.token = lex.token.replace(":", "")      # Remove punctuation character
         lex.setTokenMeta(TK_KEY)
     else:

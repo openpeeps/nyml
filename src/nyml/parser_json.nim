@@ -143,7 +143,7 @@ proc hasErrorRules*[T: Document](doc: T): bool = doc.has_errors
 proc getErrorRules*[T: Document](doc: T): seq[DocumentError] = doc.errors
 proc getErrorsCount*[T: Document](doc: T): int = doc.getTotalErrors
 
-proc setError[T: Parser](p: var T, lineno: int, msg: string) = p.error = "Error ($2:$3): $1" % [msg, $lineno, "13"]
+proc setError[T: Parser](p: var T, pos: tuple[line, col: int], msg: string) = p.error = "Error ($2:$3): $1" % [msg, $pos.line, $pos.col]
 proc hasError[T: Parser](p: var T): bool = p.error.len != 0
 proc isSame(a, b: int): bool = result = a == b
 proc isSameWith(prev, curr: TokenKind, these: set[TokenKind]): bool = prev in these and curr in these
@@ -183,13 +183,13 @@ proc walk(p: var Parser, isRecursive: bool = false) =
         if p.current.isKey() and p.next.isLiteral():
             # Collect literals
             if not p.next.isSameLine(p.current):
-                p.setError(p.next.line, "Bad indentation for '$1' key declaration" % [p.current.value])
+                p.setError((line: p.current.line, col: p.current.col), "Bad indentation for '$1' key declaration" % [p.current.value])
                 break
             add p.contents, "\"$1\": $2," % [p.current.value, getValue(p.next)]
             jump p, 2
 
             if p.current.isLiteral():
-                p.setError(p.current.line, "Unallowed mix of values assigned to the same key.")
+                p.setError((line: p.current.line, col: p.current.col), "Unallowed mix of values assigned to the same key.")
                 break
         elif p.current.isKey() and p.next.isKey():
             # Collect objects
@@ -210,7 +210,9 @@ proc walk(p: var Parser, isRecursive: bool = false) =
                 add p.contents, "$1," % [getValue(p.current)]
                 jump p
             add p.contents, "],"
-
+        else:
+            p.setError((line: p.next.line, col: p.next.col), "Unrecognized character")
+            break
     if isRecursive:
         add p.contents, "},"
 
@@ -225,8 +227,8 @@ proc parseToJson*[T: Nyml](yml: var T, nymlContents: string): Document =
 
     if p.hasError() or p.lexer.hasError():
         let error: string = if p.error.len == 0: p.lexer.error else: p.error
-        echo "\n" & error & "\n"              
+        echo "\n" & error & "\n"
         result = Document(json_contents: %*{})
-    else:
+    else: 
         result = Document(json_contents: parseJson(p.contents))
     p.lexer.close()
