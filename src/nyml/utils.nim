@@ -21,5 +21,5 @@ proc parseBoolValue*(v: string): bool =
 proc parseBoolValueStr*(v: string): string =
     case v:
     of "TRUE", "True", "true", "YES", "Yes", "yes", "y": result = "true"
-    of "FALSE", "False", "false", "NO", "No", "no", "n": result = "true"
+    of "FALSE", "False", "false", "NO", "No", "no", "n": result = "false"
     else: raise newException(ValueError, "cannot interpret as a bool: " & v)    
