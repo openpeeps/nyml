@@ -2,3 +2,6 @@ nimcache/
 nimblecache/
 htmldocs/
 bin/*
+testresults/
+
+tests/test_nyml
