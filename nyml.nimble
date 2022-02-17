@@ -12,7 +12,7 @@ requires "nim >= 1.4.0"
 
 task dev, "Compile Nyml":
     echo "\n✨ Compiling Nyml" & "\n"
-    exec "nimble build --gc:arc -d:useMalloc"
+    exec "nim c --gc:arc -d:useMalloc -r src/nyml.nim"
 
 task tests, "Run test":
     exec "testament p 'tests/*.nim'"
