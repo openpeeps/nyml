@@ -8,7 +8,6 @@
 
 import json
 import nyml/[meta, lexer, parser_json]
-from strutils import contains, split
 
 export Nyml, EngineParser, Document, TokenKind
 export parser_json.get, parser_json.hasErrorRules, parser_json.getErrorRules, parser_json.getErrorMessage, parser_json.getErrorsCount

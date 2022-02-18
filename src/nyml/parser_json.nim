@@ -145,19 +145,11 @@ proc getErrorsCount*[T: Document](doc: T): int = doc.getTotalErrors
 
 proc setError[T: Parser](p: var T, pos: tuple[line, col: int], msg: string) = p.error = "Error ($2:$3): $1" % [msg, $pos.line, $pos.col]
 proc hasError[T: Parser](p: var T): bool = p.error.len != 0
-proc isSame(a, b: int): bool = result = a == b
-proc isSameWith(prev, curr: TokenKind, these: set[TokenKind]): bool = prev in these and curr in these
 proc isKey(tk: TokenTuple): bool = tk.kind == TK_KEY
 proc isArrayValue(tk: TokenTuple): bool = tk.kind == TK_ARRAY_ITEM
-proc isObject(tk: TokenTuple): bool = tk.kind == TK_KEY
 proc isSameLine(next, curr: TokenTuple): bool = curr.line == next.line
 proc isLiteral(tk: TokenTuple): bool = tk.kind in {TK_STRING, TK_INTEGER, TK_BOOLEAN}
 proc isChildOf(next, curr: TokenTuple): bool = next.wsno > curr.wsno
-
-proc isValue(): bool =
-    # Determine if current token is kind of
-    # TK_STRING, TK_INTEGER, TK_BOOLEAN or TK_ARRAY
-    discard
 
 proc jump[T: Parser](p: var T, offset = 1) =
     var i = 0

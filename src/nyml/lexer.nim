@@ -71,14 +71,6 @@ proc nextToEOL[T: Lexer](lex: var T): tuple[pos: int, token: string] =
             inc lex.bufpos
     return (pos: lex.bufpos, token: lex.token)
 
-proc skipToEOL[T: Lexer](lex: var T): int =
-    # Get entire buffer starting from given position to the end of line
-    while true:
-        if lex.buf[lex.bufpos] in NewLines:
-            return
-        inc lex.bufpos
-    return lex.bufpos
-
 proc handleNewLine[T: Lexer](lex: var T) =
     ## Handle new lines
     case lex.buf[lex.bufpos]
