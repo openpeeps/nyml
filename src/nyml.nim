@@ -30,7 +30,3 @@ proc parse*[T: Nyml](nyml: T, contents: JsonNode): Document =
     
     raise newException(NymlException,
         "JSON contents can be parsed only by J2Y engine *(JSON to YAML)")
-
-when isMainModule:
-    let doc = Nyml(engine: Y2J).parse(readFile("sample.yml"))
-    echo pretty(doc.get(), 4)
