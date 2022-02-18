@@ -5,8 +5,6 @@ author        = "George Lemon"
 description   = "A stupid simple YAML-like implementation in Nim language. From YML to JsonNode"
 license       = "MIT"
 srcDir        = "src"
-bin           = @["nyml"]
-binDir        = "bin"
 
 # Dependencies
 
@@ -14,7 +12,7 @@ requires "nim >= 1.4.0"
 
 task dev, "Compile Nyml":
     echo "\n✨ Compiling Nyml" & "\n"
-    exec "nimble build --gc:arc -d:useMalloc"
+    exec "nim c --gc:arc -d:useMalloc -r src/nyml.nim"
 
 task tests, "Run test":
     exec "testament p 'tests/*.nim'"
