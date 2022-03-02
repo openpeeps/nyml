@@ -54,11 +54,6 @@ proc getLiteral(): set[TokenKind] =
 proc getAssignableTokens(): set[TokenKind] = 
     result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE, TK_IDENTIFIER}
 
-proc isLiteral(tk: TokenTuple): bool =
-    ## Determine if current TokenKind is either
-    ## TK_STRING, TK_INTEGER, or TK_BOOL_TRUE / TK_BOOL_FALSE
-    result = tk.kind in getLiteral()
-
 proc isKey[T: TokenTuple](token: T): bool =
     ## Determine if current TokenKind is TK_IDENTIFIER
     result = token.kind == TK_IDENTIFIER
@@ -78,11 +73,6 @@ proc isEOF[T: TokenTuple](token: T): bool =
 
 proc isChildOf[T: TokenTuple](token: T, parentToken: T): bool =
     result = token.col > parentToken.col 
-
-proc hasBracket[P: Parser](p: var P): bool =
-    ## Determine if current iteration has opened a bracket,
-    ## either Square or Curly.
-    result = p.bracket != None
 
 proc startBracket[P: Parser](p: var P, bracket: BracketType) =
     p.brackets.add(bracket)
