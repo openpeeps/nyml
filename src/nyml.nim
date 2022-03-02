@@ -1,31 +1,52 @@
 # 
-# A simple YAML-1.0 parser to JsonNode and from JSON back to YAML.
+# A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode
 # https://github.com/openpeep/nyml
 # 
 # Copyright 2021 George Lemon from OpenPeep
 # Released under MIT License
 # 
+import std/json
+import nyml/parser
+import nyml/meta
+export meta
 
-import json
-import nyml/[meta, lexer, parser_json]
+proc parse[N: Nyml](n: var N): Parser =
+    ## Internal procedure for parsing current YAML Contents
+    result = parseYAML(n.getYamlContents)
 
-export Nyml, EngineParser, Document, TokenKind
-export parser_json.get, parser_json.hasErrorRules, parser_json.getErrorRules, parser_json.getErrorMessage, parser_json.getErrorsCount
-export json
+proc toJson*[N: Nyml](n: var N): Document =
+    ## Parse YAML contents to JsonNode without content rules
+    var p: Parser = n.parse()
+    if p.hasError():
+        raise newException(NymlException, p.getError)
+    elif p.lex.hasError():
+        raise newException(NymlException, p.lex.getError)
+    else:
+        result = Document(contents: parseJson(p.getContents()))
 
-proc parse*[T: Nyml](nymlObject: T, contents: string, rules: seq[string] = @[]): Document =
-    ## Parse YAML contents to JSON
-    var nyml = nymlObject
-    if nyml.engine == Y2J:
-        var doc = nyml.parseToJson(contents)
-        if rules.len != 0:
-            doc.setRules(rules)
-        return doc
-    raise newException(NymlException, "Stringified contents can be parsed only by Y2J engine (YAML to JSON)")
+proc toJson*[N: Nyml](n: var N, rules:seq[string]): Document =
+    ## Parse YAML contents to JsonNode followed by content rules
+    var doc: Document = Document(contents: n.toJson())
+    if rules.len != 0:
+        doc.setRules(rules)
+    result = doc
 
-proc parse*[T: Nyml](nyml: T, contents: JsonNode): Document =
-    ## Parse JsonNode contents to YAML
-    if nyml.engine == J2Y: discard
-    
-    raise newException(NymlException,
-        "JSON contents can be parsed only by J2Y engine *(JSON to YAML)")
+proc toJsonStr*[N: Nyml](n: var N, prettyPrint = false, indent = 2): string =
+    ## YAML parser to JSON string representation without rules checker
+    var p: Parser = n.parse()
+    if p.hasError():
+        raise newException(NymlException, p.getError)
+    elif p.lex.hasError():
+        raise newException(NymlException, p.lex.getError)
+    else:
+        if prettyPrint: # TODO native support for indentation, to avoid parsing the string JSON to JsonNode
+            result = pretty(parseJson(p.getContents()), indent)
+        else:
+            result = p.getContents()
+
+proc toJsonStr*[N: Nyml](n: var N, rules:seq[string], prettyPrint = false, indent = 2): string =
+    ## YAML parser to JSON string representation, with rules checker
+    var doc: Document = Document(contents: n.toJson())
+    if rules.len != 0:
+        doc.setRules(rules)
+    result = $doc.get()

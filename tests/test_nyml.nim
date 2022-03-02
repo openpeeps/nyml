@@ -25,42 +25,39 @@ assets:
     public: "/assets"
 
 console:
-    logger: true                    # Enable http request logger
-    clear: true                     # Clear previous console output on request
+    logger: true
+    clear: true
 """
-  let got = Nyml(engine: Y2J).parse(input,
-    rules = @[
-      "name*:string",
-      "path*:string",
-      "port:int|1234",
-      "port2:int|1234",
+  var yml = Nyml.init(contents = input)
+  let doc = yml.toJson()
+    # rules = @[
+    #   "name*:string",
+    #   "path*:string",
+    #   "port:int|1234",
 
-      "templates*:object",
-      "templates.layouts*:string",
-      "templates.views*:string",
-      "templates.partials*:string",
+    #   "templates*:object",
+    #   "templates.layouts*:string",
+    #   "templates.views*:string",
+    #   "templates.partials*:string",
 
-      "console:object",
-      "console.logger:bool|true",
-      "console.clear:bool|true",
-    ])
-  check got.get("name").getStr == "Madam"
-  check got.get("path").getStr == "./example"
-  check got.get("port").getInt == 1230
-  check got.get("port2").getInt == 1234 # Default value
-  check got.get("templates.views").getStr == "views"
-  check got.get("console.logger").getBool == true
+    #   "console:object",
+    #   "console.logger:bool|true",
+    #   "console.clear:bool|true",
+    # ]
+  check doc.get("name").getStr == "Madam"
+  check doc.get("path").getStr == "./example"
+  check doc.get("port").getInt == 1230
+  check doc.get("templates.views").getStr == "views"
+  check doc.get("console.logger").getBool == true
 
-block:
-  checkpoint "Error case"
+# block:
+#   checkpoint "Error case"
 
-  const input = """
-name: 123
-path: "./example"
-"""
-  let got = Nyml(engine: Y2J).parse(input,
-    rules = @[
-      "name*:string",
-    ])
-  check got.hasErrorRules
-  check got.getErrorsCount == 1
+#   const input = """
+# name: 123
+# path: "./example"
+# """
+#   var yml = Nyml.init(contents = input)
+#   let doc = yml.toJson()
+#   check doc.hasErrorRules
+#   check doc.getErrorsCount == 1
