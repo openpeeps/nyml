@@ -33,60 +33,36 @@ path: "./example"
 port: 1230
 
 templates:
-    views: "views"
-    layouts: "layouts"
-    partials: "partials"
+  views: "views"
+  layouts: "layouts"
+  partials: "partials"
 
 assets:
-    source: "./dist/assets/*"
-    public: "/assets"
+  source: "./dist/assets/*"
+  public: "/assets"
 
 console:
-    logger: true                    # Enable http request logger
-    clear: true                     # Clear previous console output on request
+  logger: true
+  clear: true
 ```
 
 </details>
 
+From YAML to stringified JSON. Fastest. Best recommended for writing files
 ```nim
-let doc = Nyml(engine: Y2J).parse(readFile("sample.yml"),
-            rules = @[
-                "name*:string",
-                "path*:string",
-                "port:int|1234",
-                
-                "templates*:object",
-                "templates.layouts*:string",
-                "templates.views*:string",
-                "templates.partials*:string"
-                
-                "console:object"
-                "console.logger:bool|true"
-                "console.clear:bool|true"
-            ])
+    var yml = Nyml.init(contents = readFile("sample.yml"))
+    writeFile("sample.json", yml.toJsonStr())
+```
 
-if doc.hasErrorRules():
-    let count = doc.getErrorsCount()
-    let errorWord = if count == 1: "error" else: "errors"
-    echo "👉 Found $1 $2 in your Madam configuration:" % [$count, errorWord]
-    for err in doc.getErrorRules():
-        echo err.getErrorMessage()
-else:
-    echo doc.get("name").getStr                     # Madam
-    echo doc.get("assets.source").getStr            # ./dist/assets/*
+Parse YAML to stringified JSON and JsonNode using `std/json`
+```nim
+    var yml = Nyml.init(contents = readFile("sample.yml"))
+    let doc: Document = yml.toJson()
+    doc.get("name").getStr
 ```
 
 ### Rules & Validators
-_need tests_
-
-Write your own rules as a `seq[string]`. The rule syntax is very simple, you got `field_name*:string`.
-
-Note that `field_name` should point to a `field_name` key in your `.yml` file.
-
-When followed by `*` it becomes a required field. Then you have the field `type`.
-
-Now, let's take for example `port:int|1234`, which is an `optional` field of `int` type, with a `default` value `1234`.
-
+_todo_
 
 ## Roadmap
 - [ ] Add tests
