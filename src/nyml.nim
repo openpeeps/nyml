@@ -34,7 +34,6 @@ proc toJson*[N: Nyml](n: var N, rules:seq[string]): Document =
 proc toJsonStr*[N: Nyml](n: var N, prettyPrint = false, indent = 2): string =
     ## YAML parser to JSON string representation without rules checker
     var p: Parser = n.parse()
-    echo $p.getContents()
     if p.hasError():
         raise newException(NymlException, p.getError)
     elif p.lex.hasError():
