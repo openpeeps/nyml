@@ -1,9 +1,6 @@
 <p align="center">
-    😋 A stupid simple YAML-like implementation in Nim language. From <code>YML</code> to <code>JsonNode</code><br>
-    <strong>Fast</strong> • <strong>Dependency free</strong>
+    😋 A stupid simple YAML Parser. From <code>YAML</code> to stringified <code>JSON</code> or <code>JsonNode</code>. Written in Nim language 👑
 </p>
-
-_Work in progress_
 
 _Nyml has no serialization, tags, indicators or any weird things. In fact, Nyml is somewhere between `toml` and `yaml`_
 _If you need a YAML 1.2 compatible library go with [flyx's NimYAML](https://github.com/flyx/NimYAML)._
