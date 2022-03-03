@@ -7,9 +7,9 @@
 # 
 
 import toktok
-import std/ropes
+import std/[ropes, tables]
 
-from std/algorithm import reverse
+from std/algorithm import reverse, SortOrder
 from std/strutils import parseBool, parseInt, `%`
 
 import ./meta, ./utils
@@ -35,8 +35,10 @@ type
         error: string
         inArray, inObject: bool
         prev, curr, next, lastKey: TokenTuple
-        brackets: seq[BracketType]
+        # brackets: seq[BracketType]
+        brackets: OrderedTable[int, BracketType]
         lastParent: seq[TokenTuple]
+        lastArray: seq[int]
         contents: Rope
 
 proc setError[T: Parser](p: var T, msg: string) =
@@ -74,52 +76,49 @@ proc isEOF[T: TokenTuple](token: T): bool =
 proc isChildOf[T: TokenTuple](token: T, parentToken: T): bool =
     result = token.col > parentToken.col 
 
+# proc startBracket[P: Parser](p: var P, bracket: BracketType) =
+#     p.brackets.add(bracket)
+#     case p.brackets[^1]:
+#         of Curly: p.contents.add("{")
+#         of Square: p.contents.add("[")
+#         else: discard
+
 proc startBracket[P: Parser](p: var P, bracket: BracketType) =
-    p.brackets.add(bracket)
-    case p.brackets[^1]:
+    ## Open either a Curly or Square bracket
+    p.brackets[p.prev.line] = bracket
+    case p.brackets[p.prev.line]:
         of Curly: p.contents.add("{")
         of Square: p.contents.add("[")
         else: discard
 
-proc endBracket[P: Parser](p: var P) =
-    ## Procedure for closing the last bracket from brackets sequence.
-    ## Which can be either `}` or `]`
-    if p.inArray or p.inObject: return
+proc endBracket[P: Parser](p: var P, lineno = -1) =
+    ## Close a bracket based on given line number
+    var lineNumber = if lineno == -1: p.curr.line else: lineno
     if p.brackets.len != 0:
-        let bk = p.brackets[^1]
-        case bk:
+        if p.brackets.hasKey(lineNumber):
+            let bk = p.brackets[lineNumber]
+            case bk:
             of Curly, Square:
                 if bk == Curly: p.contents.add("}")
                 else:           p.contents.add("]")
-                p.brackets.delete(p.brackets.high)
+                p.brackets.del(lineNumber)
                 if not p.next.isEOF():
                     p.contents.add(",")
             else: discard
 
 proc endBrackets[P: Parser](p: var P, maxLevel = 0) =
-    ## Close all opened brackets. This procedure is using `reverse` proc `std/algorithm`
-    ## to close brackets in reverse mode.
-    var bracketsLen = p.brackets.len
-    if bracketsLen != 0:
-        var i = 0
-        p.brackets.reverse()
-        bracketsLen = bracketsLen - maxLevel
-        while i < bracketsLen:
-            try:
-                case p.brackets[i]:
-                    of Curly, Square:
-                        if p.brackets[i] == Curly:
-                            p.contents.add("}")
-                        else: p.contents.add("]")
-
-                        if not p.next.isEOF():
-                            p.contents.add(",")
-                    else: discard
-            except IndexDefect:
-                break
-            inc i
-        p.brackets.delete(i)
-        p.brackets.reverse()
+    var bklen = p.brackets.len
+    if bklen == 0: return
+    p.brackets.sort(system.cmp, order = SortOrder.Descending)
+    for lineNumber, bk in p.brackets.pairs():
+        case bk:
+        of Curly, Square:
+            if bk == Curly: p.contents.add("}")
+            else:           p.contents.add("]")
+            if not p.next.isEOF():
+                p.contents.add(",")
+        else: discard
+    p.brackets.clear()
 
 template jump[P: Parser](p: var P, offset = 1): untyped =
     var i = 0
@@ -149,7 +148,19 @@ template writeKey[T: Parser](p: var T) =
     let keyToken = p.curr
     p.contents.add j(keyToken.value, true)
     jump p
-    if not p.next.kind.expect(getAssignableTokens()):
+
+    if p.next.kind.expect(TK_HYPHEN):
+        if p.curr.line == p.next.line:
+            p.setError("Bad nest for array declaration")
+            break
+        jump p
+        if not p.next.kind.expect(getAssignableTokens()):
+            p.setError("Invalid value assignment for array declaration")
+            break
+        p.inArray = true
+        p.lastArray.add(p.curr.line)
+        p.startBracket(Square)
+    elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
 
@@ -158,11 +169,7 @@ template writeKey[T: Parser](p: var T) =
         break
     jump p
 
-    if p.curr.kind == TK_HYPHEN:
-        p.inArray = true
-        p.startBracket(Square)
-        jump p
-    elif p.curr.isKey() and p.curr.isChildOf(keyToken):
+    if p.curr.isKey() and p.curr.isChildOf(keyToken):
         p.startBracket(Curly)
         p.lastParent.add(keyToken)
     p.lastKey = keyToken
@@ -176,12 +183,13 @@ template writeString[T: Parser](p: var T) =
 template writeInt[T: Parser](p: var T) =
     p.contents.add p.curr.value
 
-template writeLiteral[T: Parser](p: var T) =
-
+template writeLiteralSnippet[P: Parser](p: var P) =
     if p.curr.isBool:       p.writeBool()
     elif p.curr.isString:   p.writeString()
     elif p.curr.isInt:      p.writeInt()
 
+template writeLiteral[T: Parser](p: var T) =
+    p.writeLiteralSnippet
     if p.next.isKey():
         if p.next.col > p.lastKey.col:
             p.setError("Invalid nesting after closing literal")
@@ -189,44 +197,48 @@ template writeLiteral[T: Parser](p: var T) =
     
     if p.next.isEOF():
         p.endBrackets()
+    else:
     
-    if p.lastParent.len != 0:
-        let getLastParent = p.lastParent[^1]
-        if p.next.isKey() and p.next.isChildOf(getLastParent) == false:
-            if p.lastKey.col == getLastParent.col:
-                p.contents.add(",")
-            else:
-                var i = 0
-                let parentPos = getLastParent.col
-                let currPos = p.next.col
-                if currPos == 0 and parentPos != 0:
-                    let lastParentLen = p.lastParent.len
-                    if not p.next.isEOF() and lastParentLen != 0:
-                        while i < lastParentLen:
-                            inc i
-                            p.endBracket()
-                        i = 0
-                    else:
-                        p.endBrackets()
-                elif currPos == 0 and parentPos == 0:
+        if p.lastParent.len != 0:
+            let getLastParent = p.lastParent[^1]
+            if p.next.isKey() and p.next.isChildOf(getLastParent) == false:
+                if p.lastKey.col == getLastParent.col:
                     p.contents.add(",")
-                    p.endBracket()
                 else:
-                    let levels = int(parentPos / currPos)
-                    while i < levels:
-                        inc i
-                        p.endBracket()
+                    var i = 0
+                    let parentPos = getLastParent.col
+                    let currPos = p.next.col
+                    if currPos == 0 and parentPos != 0:
+                        let lastParentLen = p.lastParent.len
+                        if not p.next.isEOF() and lastParentLen != 0:
+                            while i < lastParentLen:
+                                inc i
+                                p.endBracket(p.lastParent[^1].line)
+                                p.lastParent.delete(p.lastParent.high)
+                            i = 0
+                        else:
+                            p.endBracket(p.lastParent[^1].line)
+                            p.lastParent.delete(p.lastParent.high)
+                    elif currPos == 0 and parentPos == 0:
+                        p.endBracket(p.lastParent[^1].line)
                         p.lastParent.delete(p.lastParent.high)
-                    i = 0
-    if p.next.isKey():
-        if p.next.col == p.lastKey.col:
+                    else:
+                        i = 0
+                        let levels = int(parentPos / currPos)
+                        while i < levels:
+                            inc i
+                            p.endBracket(p.lastParent[^1].line)
+                            p.lastParent.delete(p.lastParent.high)
+                        i = 0
+        if p.next.isKey():
+            if p.next.col == p.lastKey.col:
+                p.contents.add(",")
+        if p.next.kind != TK_HYPHEN and p.inArray == true:
+            p.inArray = false
+            p.endBracket(p.lastArray[^1] - 1)
+            p.lastArray.delete(p.lastArray.high)
+        elif p.inArray:
             p.contents.add(",")
-    
-    if p.next.kind != TK_HYPHEN and p.inArray == true:
-        p.inArray = false
-        p.endBracket()
-    elif p.inArray:
-        p.contents.add(",")
     jump p
 
 proc walk[P: Parser](p: var P) =
