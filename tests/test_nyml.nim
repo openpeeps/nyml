@@ -11,6 +11,7 @@ block:
   checkpoint "Basic usage"
 
   const input = """
+# comments:
 name: "Madam"
 path: "./example"
 port: 1230
