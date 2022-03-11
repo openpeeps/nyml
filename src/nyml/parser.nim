@@ -76,13 +76,6 @@ proc isEOF[T: TokenTuple](token: T): bool =
 proc isChildOf[T: TokenTuple](token: T, parentToken: T): bool =
     result = token.col > parentToken.col 
 
-# proc startBracket[P: Parser](p: var P, bracket: BracketType) =
-#     p.brackets.add(bracket)
-#     case p.brackets[^1]:
-#         of Curly: p.contents.add("{")
-#         of Square: p.contents.add("[")
-#         else: discard
-
 proc startBracket[P: Parser](p: var P, bracket: BracketType) =
     ## Open either a Curly or Square bracket
     p.brackets[p.prev.line] = bracket
@@ -232,7 +225,7 @@ template writeLiteral[T: Parser](p: var T) =
                         i = 0
         if p.next.isKey():
             if p.next.col == p.lastKey.col:
-                p.contents.add(",")
+                if not p.inArray: p.contents.add(",")
         if p.next.kind != TK_HYPHEN and p.inArray == true:
             p.inArray = false
             p.endBracket(p.lastArray[^1] - 1)
