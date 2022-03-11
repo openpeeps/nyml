@@ -251,6 +251,8 @@ proc walk[P: Parser](p: var P) =
                     p.curr.kind = TK_IDENTIFIER
                     continue
                 p.writeLiteral()
+            of TK_COMMENT:
+                jump p
             else: discard           ## TODO raise exception
 
 proc getContents*[P: Parser](p: var P): string = 
