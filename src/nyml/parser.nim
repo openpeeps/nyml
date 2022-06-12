@@ -270,7 +270,6 @@ proc walk[P: Parser](p: var P) =
                 elif not p.next.kind.expect TK_COLON:
                     p.setError("Missing assignment token \":\"")
                     break
-                echo p.curr
                 p.writeKey()
             of TK_HYPHEN:
                 p.inArray = true
