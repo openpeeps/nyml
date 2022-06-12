@@ -22,6 +22,7 @@ tokens:
     Hyphen       > '-'
     Slash        > '/'
     Comment      > '#' .. EOL
+    String_Alt   > '@' .. EOL
     Backslash    > '\\'
     Bool_True    > @["TRUE", "True", "true", "YES", "Yes", "yes", "y"]
     Bool_False   > @["FALSE", "False", "false", "NO", "No", "no", "n"]
@@ -51,10 +52,10 @@ proc getError*[T: Parser](p: var T): string =
     result = p.error
 
 proc getLiteral(): set[TokenKind] =
-    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE}
+    result = {TK_STRING, TK_STRING_ALT, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE}
 
 proc getAssignableTokens(): set[TokenKind] = 
-    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE, TK_IDENTIFIER}
+    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE, TK_IDENTIFIER, TK_STRING_ALT}
 
 proc isKey[T: TokenTuple](token: T): bool =
     ## Determine if current TokenKind is TK_IDENTIFIER
@@ -64,7 +65,7 @@ proc isBool[T: TokenTuple](token: T): bool =
     result = token.kind in {TK_BOOL_TRUE, TK_BOOL_FALSE}
 
 proc isString[T: TokenTuple](token: T): bool =
-    result = token.kind == TK_STRING
+    result = token.kind in {TK_STRING, TK_STRING_ALT}
 
 proc isInt[T: TokenTuple](token: T): bool =
     result = token.kind == TK_INTEGER
@@ -141,7 +142,6 @@ template writeKey[T: Parser](p: var T) =
     let keyToken = p.curr
     p.contents.add j(keyToken.value, true)
     jump p
-
     if p.next.kind.expect(TK_HYPHEN):
         if p.curr.line == p.next.line:
             p.setError("Bad nest for array declaration")
@@ -153,10 +153,25 @@ template writeKey[T: Parser](p: var T) =
         p.inArray = true
         p.lastArray.add(p.curr.line)
         p.startBracket(Square)
+    elif p.next.kind == TK_IDENTIFIER and p.curr.line == p.next.line:
+        # TODO support unquoted string assignments
+        jump p
+        var identToStr = p.curr
+        identToStr.kind = TK_STRING
+        while true:
+            if p.curr.line == keyToken.line and p.curr.kind == TK_IDENTIFIER:
+                if p.next.line != keyToken.line:
+                    p.curr.value = identToStr.value & indent(p.curr.value, 1)
+                    break
+                else:
+                    add identToStr.value, indent(p.curr.value, 1)
+                jump p
+            else: break
+        p.curr = identToStr
+        echo p.curr
     elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
-
     if p.next.isKey() and p.next.col == keyToken.col:
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
@@ -187,7 +202,6 @@ template writeLiteral[T: Parser](p: var T) =
         if p.next.col > p.lastKey.col:
             p.setError("Invalid nesting after closing literal")
             break
-    
     if p.next.isEOF():
         p.endBrackets()
     else:
@@ -239,22 +253,9 @@ proc walk[P: Parser](p: var P) =
         if p.curr.isEOF(): break
         case p.curr.kind:
             of TK_IDENTIFIER:
-                # if (p.next.kind == TK_IDENTIFIER and p.prev.kind == TK_COLON):
-                #     if p.curr.line != p.next.line:
-                #         p.setError("Wrong string assignment")
-                #         break
-                #     var str = p.curr.value
-                #     let currln = p.curr.line
-                #     p.writeKey()
-                #     jump p
-                #     while currln == p.next.line and p.next.kind != TK_EOF:
-                #         str &= indent(p.curr.value, 1)
-                #         jump p
-                #     p.curr.kind = TK_STRING
-                #     p.curr.value = str & indent(p.curr.value, 1)
-                #     continue
+                var initKey = p.curr
+                # test/aasa: "ok"
                 if p.next.kind.expect TK_SLASH:
-                    var initCol = p.curr.col
                     var key: seq[string]
                     while true:
                         if p.curr.kind.expect TK_IDENTIFIER:
@@ -263,13 +264,10 @@ proc walk[P: Parser](p: var P) =
                             jump p
                             continue
                         if p.next.kind.expect TK_COLON:
-                            p.curr.value = join(key, "/")
-                            p.curr.col = initCol
+                            p.curr.value = initKey.value & "/" & join(key, "/")
+                            p.curr.col = initKey.col
                             break
                         jump p
-                elif not p.next.kind.expect TK_COLON:
-                    p.setError("Missing assignment token \":\"")
-                    break
                 p.writeKey()
             of TK_HYPHEN:
                 p.inArray = true
@@ -291,6 +289,7 @@ proc parseYAML*(yamlContents: string): Parser =
     var p: Parser = Parser(lex: Lexer.init(yamlContents))
     p.curr  = p.lex.getToken()
     p.next  = p.lex.getToken()
+
     p.contents.add("{")
     p.walk()
     p.contents.add("}")
