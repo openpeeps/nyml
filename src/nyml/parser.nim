@@ -10,7 +10,7 @@ import toktok
 import std/[ropes, tables]
 
 from std/algorithm import reverse, SortOrder
-from std/strutils import parseBool, parseInt, `%`
+from std/strutils import parseBool, parseInt, `%`, indent, join
 
 import ./meta, ./utils
 
@@ -239,9 +239,38 @@ proc walk[P: Parser](p: var P) =
         if p.curr.isEOF(): break
         case p.curr.kind:
             of TK_IDENTIFIER:
-                if not p.next.kind.expect(TK_COLON):
+                # if (p.next.kind == TK_IDENTIFIER and p.prev.kind == TK_COLON):
+                #     if p.curr.line != p.next.line:
+                #         p.setError("Wrong string assignment")
+                #         break
+                #     var str = p.curr.value
+                #     let currln = p.curr.line
+                #     p.writeKey()
+                #     jump p
+                #     while currln == p.next.line and p.next.kind != TK_EOF:
+                #         str &= indent(p.curr.value, 1)
+                #         jump p
+                #     p.curr.kind = TK_STRING
+                #     p.curr.value = str & indent(p.curr.value, 1)
+                #     continue
+                if p.next.kind.expect TK_SLASH:
+                    var initCol = p.curr.col
+                    var key: seq[string]
+                    while true:
+                        if p.curr.kind.expect TK_IDENTIFIER:
+                            key.add p.curr.value
+                        elif p.curr.kind.expect TK_SLASH:
+                            jump p
+                            continue
+                        if p.next.kind.expect TK_COLON:
+                            p.curr.value = join(key, "/")
+                            p.curr.col = initCol
+                            break
+                        jump p
+                elif not p.next.kind.expect TK_COLON:
                     p.setError("Missing assignment token \":\"")
                     break
+                echo p.curr
                 p.writeKey()
             of TK_HYPHEN:
                 p.inArray = true

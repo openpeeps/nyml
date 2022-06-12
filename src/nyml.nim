@@ -4,11 +4,13 @@
 # 
 # Copyright 2021 George Lemon from OpenPeep
 # Released under MIT License
-# 
+
 import std/json
 import nyml/parser
 import nyml/meta
+
 export meta
+export getInt, getStr, getBool
 
 proc parse[N: Nyml](n: var N): Parser =
     ## Internal procedure for parsing current YAML Contents
@@ -26,7 +28,7 @@ proc toJson*[N: Nyml](n: var N): Document =
 
 proc toJson*[N: Nyml](n: var N, rules:seq[string]): Document =
     ## Parse YAML contents to JsonNode followed by content rules
-    var doc: Document = Document(contents: n.toJson())
+    var doc: Document = n.toJson()
     if rules.len != 0:
         doc.setRules(rules)
     result = doc

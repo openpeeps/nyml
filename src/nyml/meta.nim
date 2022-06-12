@@ -118,7 +118,7 @@ proc parseRuleString(r: string): RuleTuple =
                 raise newException(NymlException, "\"$1\" fields cannot hold a default value" % [fieldType])
             defaultVal = ruleStruct[1]
     if fieldType notin ["array", "bool", "float", "int", "object", "string", "null"]:
-        raise newException(NymlException, "\"$1\" is not valid typed value")
+        raise newException(NymlException, "\"$1\" is not valid type")
 
     let jsonNodeType = getRuleTypeNode(fieldType)
     let defaultJsonNodeValue = getValueByNode(jsonNodeType, defaultVal)
