@@ -52,3 +52,8 @@ proc toJsonStr*[N: Nyml](n: var N, rules:seq[string], prettyPrint = false, inden
     if rules.len != 0:
         doc.setRules(rules)
     result = $doc.get()
+
+
+when isMainModule:
+    var yml = Nyml.init(contents = readFile("bin/test.yml"))
+    echo yml.toJsonStr()

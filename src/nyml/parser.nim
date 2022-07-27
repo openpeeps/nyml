@@ -168,7 +168,6 @@ template writeKey[T: Parser](p: var T) =
                 jump p
             else: break
         p.curr = identToStr
-        echo p.curr
     elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
@@ -264,7 +263,7 @@ proc walk[P: Parser](p: var P) =
                             jump p
                             continue
                         if p.next.kind.expect TK_COLON:
-                            p.curr.value = initKey.value & "/" & join(key, "/")
+                            p.curr.value = join(key, "/")
                             p.curr.col = initKey.col
                             break
                         jump p
