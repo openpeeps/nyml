@@ -1,13 +1,11 @@
-# 
-# A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode
-# https://github.com/openpeep/nyml
-# 
-# Copyright 2021 George Lemon from OpenPeep
-# Released under MIT License
-# 
+# A stupid simple YAML Parser.
+# From YAML to stringified JSON (fastest) or JsonNode
+#
+# https://github.com/openpeep/nyml | MIT License
 
-import std/[json, tables]
-from std/strutils import `%`, contains, split, parseInt, parseBool, parseFloat, join
+import std/json
+from std/strutils import `%`, contains, count, split, strip,
+                        parseInt, parseBool, parseFloat, join
 export json
 
 type
@@ -17,14 +15,11 @@ type
         yamlContents: string
         error: string
 
-    DocumentError = object
-        msg: string
-
     Document* = object
         contents*: JsonNode
         rules: seq[string]
         has_errors: bool
-        errors: seq[DocumentError]
+        errors: seq[string]
         getTotalErrors: int
 
     RuleTuple = tuple[key: string, req: bool, expect: JsonNodeKind, default: JsonNode]
@@ -90,51 +85,24 @@ proc get(contents: JsonNode, key: string = ""): JsonNode =
         else:
             result = newJNull()
 
-proc get*[T: Document](doc: T, key: string = ""): JsonNode =
-    ## Access data in current Json document using
-    ## dot annotation, user.profile.name
+method get*(doc: Document, key: string = ""): JsonNode {.base.} =
+    ## Access data in current Json document using dot annotation,
+    ## like for example: `user.profile.name`
     result = get(doc.contents, key)
 
-proc parseRuleString(r: string): RuleTuple =
-    let
-        rule = r.split("*")
-        isRequired = if rule.len == 1: false else: true
-    var
-        fieldKey, fieldType, defaultVal: string
-        ruleStruct: seq[string]
-    if isRequired:
-        fieldKey = rule[0]
-        fieldType = rule[1].split(":")[1]
-        if fieldType.contains("|"):
-            raise newException(NymlException, "Required fields cannot hold a default value")
-    else:
-        ruleStruct = rule[0].split(":")
-        fieldKey = ruleStruct[0]
-        fieldType = ruleStruct[1]
-        if fieldType.contains("|"):
-            ruleStruct = fieldType.split("|")
-            fieldType = ruleStruct[0]
-            if fieldType in ["array", "object", "string"]:
-                raise newException(NymlException, "\"$1\" fields cannot hold a default value" % [fieldType])
-            defaultVal = ruleStruct[1]
-    if fieldType notin ["array", "bool", "float", "int", "object", "string", "null"]:
-        raise newException(NymlException, "\"$1\" is not valid type")
+proc exists*(field: JsonNode): bool =
+    result = field != nil
 
-    let jsonNodeType = getRuleTypeNode(fieldType)
-    let defaultJsonNodeValue = getValueByNode(jsonNodeType, defaultVal)
-    result = (key: fieldKey, req: isRequired, expect: jsonNodeType, default: defaultJsonNodeValue)
+method rules*(doc: var Document, docRules: openarray[tuple[key: string, kind: JsonNodeKind]]) {.base.} =
+    for rule in docRules:
+        var val = doc.get(rule.key)
+        if val.kind == JNull and val.kind != rule.kind:
+            doc.errors.add("\"$1\" field is missing" % [rule.key])
+        elif val.kind != rule.kind:
+            doc.errors.add("\"$1\" field is type of `$2`, `$3` given." % [rule.key, $rule.kind, $val.kind])
 
-proc setRules*[D: Document](doc: var D, rules: seq[string]) =
-    ## Apply a set of rules to current Json Document
-    for r in rules:
-        let rule = parseRuleString(r)
-        var fieldVal: JsonNode = doc.get(rule.key)
-        var fieldType: JsonNodeKind = rule.expect
-        if fieldVal.kind == JNull:
-            fieldVal = rule.default                     # get default value, if any
-            doc.contents[rule.key] = fieldVal      # TODO create macro set data with dot annotations
-        if fieldVal.kind != fieldType:
-            doc.errors.add(DocumentError(msg: "\"$1\" field is type of \"$2\", \"$3\" value given" % [rule.key, getTypeStr(fieldType), getTypeStr(fieldVal.kind)]))
-            inc doc.getTotalErrors
-    if doc.errors.len != 0:
-        doc.has_errors = true
+method hasErrors*(doc: Document): bool {.base.} =
+    result = doc.errors.len != 0
+
+method getErrors*(doc: Document): string {.base.} =
+    result = join(doc.errors, "\n")
