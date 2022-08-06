@@ -6,3 +6,4 @@ bin/*
 testresults/
 
 tests/test_nyml
+/pkginfo.json
