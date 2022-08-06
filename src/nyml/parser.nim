@@ -167,8 +167,7 @@ template writeKey[T: Parser](p: var T) =
                     add identToStr.value, indent(p.curr.value, 1)
                 jump p
             else: break
-        p.curr = identToStr
-        echo p.curr
+        # p.curr = identToStr
     elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
@@ -254,7 +253,6 @@ proc walk[P: Parser](p: var P) =
         case p.curr.kind:
             of TK_IDENTIFIER:
                 var initKey = p.curr
-                # test/aasa: "ok"
                 if p.next.kind.expect TK_SLASH:
                     var key: seq[string]
                     while true:
@@ -264,7 +262,7 @@ proc walk[P: Parser](p: var P) =
                             jump p
                             continue
                         if p.next.kind.expect TK_COLON:
-                            p.curr.value = initKey.value & "/" & join(key, "/")
+                            p.curr.value = join(key, "/")
                             p.curr.col = initKey.col
                             break
                         jump p

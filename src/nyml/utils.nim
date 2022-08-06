@@ -1,23 +1,16 @@
-# 
-# A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode
-# https://github.com/openpeep/nyml
-# 
-# Copyright 2021 George Lemon from OpenPeep
-# Released under MIT License
-# 
+# A stupid simple YAML Parser.
+# From YAML to stringified JSON (fastest) or JsonNode
+#
+# https://github.com/openpeep/nyml | MIT License
 
 from ./meta import Document
 from std/json import JsonNode
 
 proc get*[T: Document](doc: T, key: string = ""): JsonNode =
     ## Retrieve a value from current Nyml Document as JsonNode.
-    ## This procedure requires parsing the stringified JSON as JsonNode
     result = get(doc.nyjson, key)
 
 proc get*[T: Document](doc: T, key: string = "", asObject = true): Document =
-    ## Retrieve a value from current Nyml Document as NyObject
-    ## This procedure is using an internal Object handler
-    ## for returning structured data as Nim Objects
     result = get(doc.nyobject, key)
 
 proc boolVariant*(): seq[string] = 

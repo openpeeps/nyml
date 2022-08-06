@@ -1,18 +1,25 @@
-# 
-# A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode
-# https://github.com/openpeep/nyml
-# 
-# Copyright 2021 George Lemon from OpenPeep
-# Released under MIT License
-
+# A stupid simple YAML Parser.
+# From YAML to stringified JSON (fastest) or JsonNode
+#
+# https://github.com/openpeep/nyml | MIT License
+import pkginfo
 import std/json
-import nyml/parser
-import nyml/meta
+import nyml/[meta, parser]
+
+export json, parser
+
+when requires "jsony":
+    # By default, Nyml has no built-in serialization.
+    # But, thanks to `pkginfo` we can enable the serialization feature
+    # using `jsony` package library (when current project requires it)
+    # https://github.com/treeform/jsony
+    import jsony
+    export jsony
 
 export meta
 export getInt, getStr, getBool
 
-proc parse[N: Nyml](n: var N): Parser =
+proc parse*[N: Nyml](n: var N): Parser =
     ## Internal procedure for parsing current YAML Contents
     result = parseYAML(n.getYamlContents)
 
@@ -24,6 +31,7 @@ proc toJson*[N: Nyml](n: var N): Document =
     elif p.lex.hasError():
         raise newException(NymlException, p.lex.getError)
     else:
+        # echo p.getContents()
         result = Document(contents: parseJson(p.getContents()))
 
 proc toJson*[N: Nyml](n: var N, rules:seq[string]): Document =
@@ -52,3 +60,15 @@ proc toJsonStr*[N: Nyml](n: var N, rules:seq[string], prettyPrint = false, inden
     if rules.len != 0:
         doc.setRules(rules)
     result = $doc.get()
+
+when requires "jsony":
+    template ymlParser*(strContents: string, toObject: typedesc[object]): untyped =
+        var yml = Nyml.init(strContents)
+        var p: Parser = yml.parse()
+        if p.hasError():
+            raise newException(NymlException, p.getError)
+        elif p.lex.hasError():
+            raise newException(NymlException, p.lex.getError)
+        else:
+            var parsedContents = p.getContents()
+            parsedContents.fromJson(toObject)

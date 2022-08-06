@@ -32,36 +32,6 @@ proc getYamlContents*[N: Nyml](n: N): string {.inline.} =
     ## Retrieve YAMl contents fron Nyml object
     result = n.yamlContents
 
-proc getRuleTypeNode(nodetype: string): JsonNodeKind =
-    return case nodetype:
-        of "array": JArray
-        of "bool": JBool
-        of "float": JFloat
-        of "int": JInt
-        of "object": JObject
-        of "string": JString
-        else: JNull
-
-proc getValueByNode(nodetype: JsonNodeKind, value: string): JsonNode = 
-    return case nodetype:
-        of JArray: newJArray()
-        of JBool: newJBool(parseBool(value))
-        of JFloat: newJFloat(parseFloat(value))
-        of JInt: newJInt(parseInt(value))
-        of JObject: newJObject()
-        of JString: newJString(value)
-        else: newJNull()
-
-proc getTypeStr(nodetype: JsonNodeKind): string = 
-    return case nodetype:
-        of JArray: "array"
-        of JBool: "bool"
-        of JFloat: "float"
-        of JInt: "int"
-        of JObject: "object"
-        of JString: "string"
-        else: "null"
-
 proc get(contents: JsonNode, key: string = ""): JsonNode = 
     ## Access data in current Json document using
     ## dot annotation, user.profile.name
@@ -85,7 +55,7 @@ proc get(contents: JsonNode, key: string = ""): JsonNode =
         else:
             result = newJNull()
 
-method get*(doc: Document, key: string = ""): JsonNode {.base.} =
+proc get*(doc: Document, key: string = ""): JsonNode =
     ## Access data in current Json document using dot annotation,
     ## like for example: `user.profile.name`
     result = get(doc.contents, key)
@@ -93,7 +63,7 @@ method get*(doc: Document, key: string = ""): JsonNode {.base.} =
 proc exists*(field: JsonNode): bool =
     result = field != nil
 
-method rules*(doc: var Document, docRules: openarray[tuple[key: string, kind: JsonNodeKind]]) {.base.} =
+proc rules*(doc: var Document, docRules: openarray[tuple[key: string, kind: JsonNodeKind]]) =
     for rule in docRules:
         var val = doc.get(rule.key)
         if val.kind == JNull and val.kind != rule.kind:
@@ -101,8 +71,11 @@ method rules*(doc: var Document, docRules: openarray[tuple[key: string, kind: Js
         elif val.kind != rule.kind:
             doc.errors.add("\"$1\" field is type of `$2`, `$3` given." % [rule.key, $rule.kind, $val.kind])
 
-method hasErrors*(doc: Document): bool {.base.} =
+proc hasErrors*(doc: Document): bool =
     result = doc.errors.len != 0
 
-method getErrors*(doc: Document): string {.base.} =
+proc getErrors*(doc: Document): string =
     result = join(doc.errors, "\n")
+
+proc newDocument*(contents: JsonNode): Document =
+    result = Document(contents: contents)
