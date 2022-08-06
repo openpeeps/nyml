@@ -167,7 +167,6 @@ template writeKey[T: Parser](p: var T) =
                     add identToStr.value, indent(p.curr.value, 1)
                 jump p
             else: break
-        # p.curr = identToStr
     elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
