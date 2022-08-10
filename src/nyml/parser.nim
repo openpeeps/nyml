@@ -14,6 +14,9 @@ from std/strutils import parseBool, parseInt, `%`, indent, join
 
 import ./meta, ./utils
 
+static:
+    Program.settings(true, "Tk_")
+
 tokens:
     Lbr          > '['
     Rbr          > ']'
@@ -22,7 +25,6 @@ tokens:
     Hyphen       > '-'
     Slash        > '/'
     Comment      > '#' .. EOL
-    String_Alt   > '@' .. EOL
     Backslash    > '\\'
     Bool_True    > @["TRUE", "True", "true", "YES", "Yes", "yes", "y"]
     Bool_False   > @["FALSE", "False", "false", "NO", "No", "no", "n"]
@@ -43,7 +45,7 @@ type
         contents: Rope
 
 proc setError[T: Parser](p: var T, msg: string) =
-    p.error = "Error ($2:$3): $1" % [msg, $p.curr.line, $p.curr.col]
+    p.error = "Error ($2:$3): $1" % [msg, $p.curr.line, $p.curr.pos]
 
 proc hasError*[T: Parser](p: var T): bool =
     result = p.error.len != 0
@@ -52,10 +54,10 @@ proc getError*[T: Parser](p: var T): string =
     result = p.error
 
 proc getLiteral(): set[TokenKind] =
-    result = {TK_STRING, TK_STRING_ALT, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE}
+    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE}
 
 proc getAssignableTokens(): set[TokenKind] = 
-    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE, TK_IDENTIFIER, TK_STRING_ALT}
+    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE, TK_IDENTIFIER}
 
 proc isKey[T: TokenTuple](token: T): bool =
     ## Determine if current TokenKind is TK_IDENTIFIER
@@ -65,7 +67,7 @@ proc isBool[T: TokenTuple](token: T): bool =
     result = token.kind in {TK_BOOL_TRUE, TK_BOOL_FALSE}
 
 proc isString[T: TokenTuple](token: T): bool =
-    result = token.kind in {TK_STRING, TK_STRING_ALT}
+    result = token.kind in {TK_STRING}
 
 proc isInt[T: TokenTuple](token: T): bool =
     result = token.kind == TK_INTEGER
@@ -75,7 +77,7 @@ proc isEOF[T: TokenTuple](token: T): bool =
     result = token.kind == TK_EOF
 
 proc isChildOf[T: TokenTuple](token: T, parentToken: T): bool =
-    result = token.col > parentToken.col 
+    result = token.pos > parentToken.pos 
 
 proc startBracket[P: Parser](p: var P, bracket: BracketType) =
     ## Open either a Curly or Square bracket
@@ -155,22 +157,23 @@ template writeKey[T: Parser](p: var T) =
         p.startBracket(Square)
     elif p.next.kind == TK_IDENTIFIER and p.curr.line == p.next.line:
         # TODO support unquoted string assignments
-        jump p
-        var identToStr = p.curr
-        identToStr.kind = TK_STRING
-        while true:
-            if p.curr.line == keyToken.line and p.curr.kind == TK_IDENTIFIER:
-                if p.next.line != keyToken.line:
-                    p.curr.value = identToStr.value & indent(p.curr.value, 1)
-                    break
-                else:
-                    add identToStr.value, indent(p.curr.value, 1)
-                jump p
-            else: break
+        p.next.kind = TK_STRING
+        # jump p
+        # var identToStr = p.curr
+        # identToStr.kind = TK_STRING
+        # while true:
+        #     if p.curr.line == keyToken.line and p.curr.kind == TK_IDENTIFIER:
+        #         if p.next.line != keyToken.line:
+        #             p.curr.value = identToStr.value & indent(p.curr.value, 1)
+        #             break
+        #         else:
+        #             add identToStr.value, indent(p.curr.value, 1)
+        #         jump p
+        #     else: break
     elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
-    if p.next.isKey() and p.next.col == keyToken.col:
+    if p.next.isKey() and p.next.pos == keyToken.pos:
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
     jump p
@@ -197,7 +200,7 @@ template writeLiteralSnippet[P: Parser](p: var P) =
 template writeLiteral[T: Parser](p: var T) =
     p.writeLiteralSnippet
     if p.next.isKey():
-        if p.next.col > p.lastKey.col:
+        if p.next.pos > p.lastKey.pos:
             p.setError("Invalid nesting after closing literal")
             break
     if p.next.isEOF():
@@ -207,12 +210,12 @@ template writeLiteral[T: Parser](p: var T) =
         if p.lastParent.len != 0:
             let getLastParent = p.lastParent[^1]
             if p.next.isKey() and p.next.isChildOf(getLastParent) == false:
-                if p.lastKey.col == getLastParent.col:
+                if p.lastKey.pos == getLastParent.pos:
                     p.contents.add(",")
                 else:
                     var i = 0
-                    let parentPos = getLastParent.col
-                    let currPos = p.next.col
+                    let parentPos = getLastParent.pos
+                    let currPos = p.next.pos
                     if currPos == 0 and parentPos != 0:
                         let lastParentLen = p.lastParent.len
                         if not p.next.isEOF() and lastParentLen != 0:
@@ -236,7 +239,7 @@ template writeLiteral[T: Parser](p: var T) =
                             p.lastParent.delete(p.lastParent.high)
                         i = 0
         if p.next.isKey():
-            if p.next.col == p.lastKey.col:
+            if p.next.pos == p.lastKey.pos:
                 if not p.inArray: p.contents.add(",")
         if p.next.kind != TK_HYPHEN and p.inArray == true:
             p.inArray = false
@@ -262,7 +265,7 @@ proc walk[P: Parser](p: var P) =
                             continue
                         if p.next.kind.expect TK_COLON:
                             p.curr.value = join(key, "/")
-                            p.curr.col = initKey.col
+                            p.curr.pos = initKey.pos
                             break
                         jump p
                 p.writeKey()
