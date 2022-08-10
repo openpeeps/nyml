@@ -10,7 +10,7 @@ import toktok
 import std/[ropes, tables]
 
 from std/algorithm import reverse, SortOrder
-from std/strutils import parseBool, parseInt, `%`, indent, join
+from std/strutils import parseBool, parseInt, `%`, indent, join, strip
 
 import ./meta, ./utils
 
@@ -141,6 +141,7 @@ proc j(value: string, isKey: bool): string =
     result = "\"" & value & "\":"
 
 template writeKey[T: Parser](p: var T) =
+    var skipJump: bool
     let keyToken = p.curr
     p.contents.add j(keyToken.value, true)
     jump p
@@ -157,26 +158,29 @@ template writeKey[T: Parser](p: var T) =
         p.startBracket(Square)
     elif p.next.kind == TK_IDENTIFIER and p.curr.line == p.next.line:
         # TODO support unquoted string assignments
-        p.next.kind = TK_STRING
-        # jump p
-        # var identToStr = p.curr
-        # identToStr.kind = TK_STRING
-        # while true:
-        #     if p.curr.line == keyToken.line and p.curr.kind == TK_IDENTIFIER:
-        #         if p.next.line != keyToken.line:
-        #             p.curr.value = identToStr.value & indent(p.curr.value, 1)
-        #             break
-        #         else:
-        #             add identToStr.value, indent(p.curr.value, 1)
-        #         jump p
-        #     else: break
+        let tk = p.next
+        var tkValue: string
+        jump p
+        while true:
+            if p.curr.line == keyToken.line and p.curr.kind == TK_IDENTIFIER:
+                if p.next.line != keyToken.line:
+                    tkValue = tkValue & indent(p.curr.value, 1)
+                    break
+                else:
+                    add tkValue, indent(p.curr.value, 1)
+                jump p
+            else: break
+        p.curr.value = tkValue.strip()
+        p.curr.kind = TK_STRING
+        skipJump = true
     elif not p.next.kind.expect(getAssignableTokens()):
         p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
         break
-    if p.next.isKey() and p.next.pos == keyToken.pos:
-        p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
-        break
-    jump p
+    if not skipJump:
+        if p.next.isKey() and p.next.pos == keyToken.pos:
+            p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
+            break
+        jump p
 
     if p.curr.isKey() and p.curr.isChildOf(keyToken):
         p.startBracket(Curly)
