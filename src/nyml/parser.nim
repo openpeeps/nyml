@@ -26,6 +26,7 @@ tokens:
     Slash        > '/'
     Comment      > '#' .. EOL
     Backslash    > '\\'
+    # to be implemented in toktok
     Bool_True    > @["TRUE", "True", "true", "YES", "Yes", "yes", "y"]
     Bool_False   > @["FALSE", "False", "false", "NO", "No", "no", "n"]
 
@@ -141,7 +142,7 @@ proc j(value: string, isKey: bool): string =
     result = "\"" & value & "\":"
 
 template writeKey[T: Parser](p: var T) =
-    var skipJump: bool
+    var skipJump = false
     let keyToken = p.curr
     p.contents.add j(keyToken.value, true)
     jump p
@@ -162,7 +163,7 @@ template writeKey[T: Parser](p: var T) =
         var tkValue: string
         jump p
         while true:
-            if p.curr.line == keyToken.line and p.curr.kind == TK_IDENTIFIER:
+            if p.curr.line == keyToken.line and p.curr.kind in getAssignableTokens():
                 if p.next.line != keyToken.line:
                     tkValue = tkValue & indent(p.curr.value, 1)
                     break

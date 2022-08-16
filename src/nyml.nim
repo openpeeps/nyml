@@ -72,3 +72,7 @@ when requires "jsony":
         else:
             var parsedContents = p.getContents()
             parsedContents.fromJson(toObject)
+
+when isMainModule:
+    var yml = Nyml.init(readFile("test.yml"))
+    echo yml.toJson()
