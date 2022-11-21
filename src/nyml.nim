@@ -75,5 +75,5 @@ when requires "jsony":
 
 when isMainModule:
     from os import getCurrentDir
-    var yml = Nyml.init(getCurrentDir() & "/bin/test.yml")
+    var yml = Nyml.init(readFile(getCurrentDir() & "/bin/test.yml"))
     echo yml.toJson()
