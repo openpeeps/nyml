@@ -283,7 +283,8 @@ proc walk[P: Parser](p: var P) =
                 p.writeLiteral()
             of TK_COMMENT:
                 jump p
-            else: discard           ## TODO raise exception
+            else:
+                raise newException(NymlException, "Unexpected token " & p.curr.value)
 
 proc getContents*[P: Parser](p: var P): string = 
     ## Retrieve parsed YAML as JSON string
