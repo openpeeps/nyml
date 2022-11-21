@@ -26,9 +26,8 @@ tokens:
     Slash        > '/'
     Comment      > '#' .. EOL
     Backslash    > '\\'
-    # to be implemented in toktok
-    Bool_True    > @["TRUE", "True", "true", "YES", "Yes", "yes", "y"]
-    Bool_False   > @["FALSE", "False", "false", "NO", "No", "no", "n"]
+    Bool_True    > {"TRUE", "True", "true", "YES", "Yes", "yes", "y"}
+    Bool_False   > {"FALSE", "False", "false", "NO", "No", "no", "n"}
 
 type
     BracketType = enum
@@ -189,7 +188,7 @@ template writeKey[T: Parser](p: var T) =
     p.lastKey = keyToken
 
 template writeBool[T: Parser](p: var T) =
-    p.contents.add(parseBoolValueStr(p.curr.value))
+    p.contents.add(p.curr.value)
 
 template writeString[T: Parser](p: var T) =
     p.contents.add j(p.curr.value)
