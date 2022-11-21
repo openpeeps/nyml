@@ -18,11 +18,11 @@ type
     Document* = object
         contents*: JsonNode
         rules: seq[string]
-        has_errors: bool
+        hasErrors: bool
         errors: seq[string]
         getTotalErrors: int
 
-    RuleTuple = tuple[key: string, req: bool, expect: JsonNodeKind, default: JsonNode]
+    # RuleTuple = tuple[key: string, req: bool, expect: JsonNodeKind, default: JsonNode]
 
 proc init*[N: typedesc[Nyml]](newNyml: N, contents: string): Nyml =
     ## Initialize a new Nyml instance
