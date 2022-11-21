@@ -73,7 +73,7 @@ when requires "jsony":
             var parsedContents = p.getContents()
             parsedContents.fromJson(toObject)
 
-when isMainModule:
-    from os import getCurrentDir
-    var yml = Nyml.init(readFile(getCurrentDir() & "/bin/test.yml"))
-    echo yml.toJson()
+# when isMainModule:
+#     from os import getCurrentDir
+#     var yml = Nyml.init(readFile(getCurrentDir() & "/bin/test.yml"))
+#     echo yml.toJson()
