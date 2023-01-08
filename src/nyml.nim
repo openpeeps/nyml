@@ -2,8 +2,7 @@
 # From YAML to stringified JSON (fastest) or JsonNode
 #
 # https://github.com/openpeep/nyml | MIT License
-import pkginfo
-import std/json
+import pkginfo, std/json
 import nyml/[meta, parser]
 
 export json, parser
@@ -19,11 +18,14 @@ when requires "jsony":
 export meta
 export getInt, getStr, getBool
 
-proc parse*[N: Nyml](n: var N): Parser =
-    ## Internal procedure for parsing current YAML Contents
+proc parse(n: Nyml): Parser =
     result = parseYAML(n.getYamlContents)
 
-proc toJson*[N: Nyml](n: var N): Document =
+proc yaml*(contents: string, prettyPrint = false): Nyml =
+    ## Parse a new YAML document
+    result = Nyml.init(contents, prettyPrint)
+
+proc toJson*(n: Nyml): Document =
     ## Parse YAML contents to JsonNode without content rules
     var p: Parser = n.parse()
     if p.hasError():
@@ -31,17 +33,9 @@ proc toJson*[N: Nyml](n: var N): Document =
     elif p.lex.hasError():
         raise newException(NymlException, p.lex.getError)
     else:
-        # echo p.getContents()
         result = Document(contents: parseJson(p.getContents()))
 
-proc toJson*[N: Nyml](n: var N, rules:seq[string]): Document =
-    ## Parse YAML contents to JsonNode followed by content rules
-    var doc: Document = n.toJson()
-    if rules.len != 0:
-        doc.setRules(rules)
-    result = doc
-
-proc toJsonStr*[N: Nyml](n: var N, prettyPrint = false, indent = 2): string =
+proc toJsonStr*(n: Nyml, prettyPrint = false, indent = 2): string =
     ## YAML parser to JSON string representation without rules checker
     var p: Parser = n.parse()
     if p.hasError():
@@ -49,19 +43,24 @@ proc toJsonStr*[N: Nyml](n: var N, prettyPrint = false, indent = 2): string =
     elif p.lex.hasError():
         raise newException(NymlException, p.lex.getError)
     else:
-        if prettyPrint: # TODO native support for indentation, to avoid parsing the string JSON to JsonNode
+        if prettyPrint:
             result = pretty(parseJson(p.getContents()), indent)
         else:
             result = p.getContents()
 
-proc toJsonStr*[N: Nyml](n: var N, rules:seq[string], prettyPrint = false, indent = 2): string =
+proc toJsonStr*(n: Nyml, ruler:seq[string], prettyPrint = false, indent = 2): string =
     ## YAML parser to JSON string representation, with rules checker
-    var doc: Document = Document(contents: n.toJson())
-    if rules.len != 0:
-        doc.setRules(rules)
+    var doc = n.toJson()
+    # if ruler.len != 0:
+    #     doc.rules(ruler)
     result = $doc.get()
 
+proc `$`*(n: Nyml): string =
+    result = n.toJsonStr(prettyPrint = n.isPretty)
+
 when requires "jsony":
+    ## Add support for loose, direct to object parser
+    ## https://github.com/treeform/jsony
     template ymlParser*(strContents: string, toObject: typedesc[object]): untyped =
         var yml = Nyml.init(strContents)
         var p: Parser = yml.parse()
@@ -72,8 +71,3 @@ when requires "jsony":
         else:
             var parsedContents = p.getContents()
             parsedContents.fromJson(toObject)
-
-# when isMainModule:
-#     from os import getCurrentDir
-#     var yml = Nyml.init(readFile(getCurrentDir() & "/bin/test.yml"))
-#     echo yml.toJson()

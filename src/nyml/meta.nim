@@ -14,23 +14,26 @@ type
     Nyml* = object
         yamlContents: string
         error: string
+        prettyPrint: bool
 
     Document* = object
         contents*: JsonNode
         rules: seq[string]
         hasErrors: bool
         errors: seq[string]
-        getTotalErrors: int
 
     # RuleTuple = tuple[key: string, req: bool, expect: JsonNodeKind, default: JsonNode]
 
-proc init*[N: typedesc[Nyml]](newNyml: N, contents: string): Nyml =
+proc init*[N: Nyml](newNyml: typedesc[N], contents: string, pretty = false): N =
     ## Initialize a new Nyml instance
-    result = newNyml(yamlContents: contents)
+    result = newNyml(yamlContents: contents, prettyPrint: pretty)
 
-proc getYamlContents*[N: Nyml](n: N): string {.inline.} =
+proc getYamlContents*(n: Nyml): string {.inline.} =
     ## Retrieve YAMl contents fron Nyml object
     result = n.yamlContents
+
+proc isPretty*(n: Nyml): bool =
+    result = n.prettyPrint
 
 proc get(contents: JsonNode, key: string = ""): JsonNode = 
     ## Access data in current Json document using
