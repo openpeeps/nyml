@@ -18,7 +18,7 @@ when requires "jsony":
 export meta
 export getInt, getStr, getBool
 
-proc parse(n: Nyml): Parser =
+proc parse*(n: Nyml): Parser =
     result = parseYAML(n.getYamlContents)
 
 proc yaml*(contents: string, prettyPrint = false): Nyml =
