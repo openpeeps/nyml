@@ -52,7 +52,7 @@ echo yaml(contents, true)
 - [ ] Add more examples
 
 ### ❤ Contributions
-You can help with code, ideas or [donations via PayPal address](https://www.paypal.com/donate/?hosted_button_id=RJK3ZTDWPL55C) 🥰 
+You can help with code, bugfixing, or any ideas. 
 
 ### 🎩 License
 Nyml is an Open Source Software released under `MIT` license. [Made by Humans from OpenPeep](https://github.com/openpeep).<br>
