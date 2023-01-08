@@ -1,48 +1,75 @@
-# 
-# A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode
-# https://github.com/openpeep/nyml
-# 
-# Copyright 2021 George Lemon from OpenPeep
-# Released under MIT License
-# 
-
 import toktok
-import std/[ropes, tables]
+import std/[ropes, tables, json, jsonutils]
 
-from std/algorithm import reverse, SortOrder
-from std/strutils import parseBool, parseInt, `%`, indent, join, strip
-
-import ./meta, ./utils
+from strutils import parseInt, parseBool, `%`
 
 static:
-    Program.settings(true, "Tk_")
+    Program.settings(true, "TK_")
 
 tokens:
-    Lbr          > '['
-    Rbr          > ']'
-    Colon        > ':'
-    Comma        > ','
-    Hyphen       > '-'
-    Slash        > '/'
-    Comment      > '#' .. EOL
-    Backslash    > '\\'
-    Bool_True    > {"TRUE", "True", "true", "YES", "Yes", "yes", "y"}
-    Bool_False   > {"FALSE", "False", "false", "NO", "No", "no", "n"}
+    LBR   > '['
+    RBR   > ']'
+    COLON > ':'
+    COMMA > ','
+    HYPHEN > '-'
+    SLASH  > '/'
+    BACKSLASH > '\\'
+    COMMENT > '#' .. EOL
+    NIL   > {"NIL", "Nil", "nil"}
+    NULL  > {"NULL", "Null", "null"}
+    TRUE  > {"TRUE", "True", "true", "YES", "Yes", "yes", "y"}
+    FALSE > {"FALSE", "False", "false", "NO", "No", "no", "n"}
 
 type
-    BracketType = enum
-        None, Square, Curly
+    NType = enum
+        Nil
+        Array
+        Object
+        String
+        Int
+        Bool
+        Comment
+        InlineComment
 
     Parser* = object
         lex*: Lexer
+        prev, curr, next: TokenTuple
+        lvl: Table[int, Node]
         error: string
-        inArray, inObject: bool
-        prev, curr, next, lastKey: TokenTuple
-        # brackets: seq[BracketType]
-        brackets: OrderedTable[int, BracketType]
-        lastParent: seq[TokenTuple]
-        lastArray: seq[int]
         contents: Rope
+        program: Program 
+        rootType: NType
+
+    Node = ref object
+        case ntype: NType
+        of Array:
+            items: seq[Node]
+            arrayInlineComment: string
+        of Object:
+            key: string
+            value: seq[Node]
+            objectInlineComment: string
+        of String:
+            strv: string
+            strInlineComment: string
+        of Int:
+            intv: int
+            intInlineComment: string
+        of Bool:
+            boolv: bool
+            boolInlineComment: string
+        of Comment:
+            comments: seq[string]
+        of InlineComment: discard
+        of Nil: discard
+        meta: tuple[line, col: int]
+
+    Program = object
+        nodes: seq[Node]
+
+const
+    assignables = {TK_STRING, TK_INTEGER, TK_TRUE, TK_FALSE, TK_IDENTIFIER}
+    literals = {TK_STRING, TK_INTEGER, TK_TRUE, TK_FALSE, TK_NIL, TK_NULL}
 
 proc setError[T: Parser](p: var T, msg: string) =
     p.error = "Error ($2:$3): $1" % [msg, $p.curr.line, $p.curr.pos]
@@ -53,250 +80,171 @@ proc hasError*[T: Parser](p: var T): bool =
 proc getError*[T: Parser](p: var T): string =
     result = p.error
 
-proc getLiteral(): set[TokenKind] =
-    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE}
-
-proc getAssignableTokens(): set[TokenKind] = 
-    result = {TK_STRING, TK_INTEGER, TK_BOOL_TRUE, TK_BOOL_FALSE, TK_IDENTIFIER}
-
-proc isKey[T: TokenTuple](token: T): bool =
-    ## Determine if current TokenKind is TK_IDENTIFIER
-    result = token.kind == TK_IDENTIFIER
-
-proc isBool[T: TokenTuple](token: T): bool =
-    result = token.kind in {TK_BOOL_TRUE, TK_BOOL_FALSE}
-
-proc isString[T: TokenTuple](token: T): bool =
-    result = token.kind in {TK_STRING}
-
-proc isInt[T: TokenTuple](token: T): bool =
-    result = token.kind == TK_INTEGER
-
-proc isEOF[T: TokenTuple](token: T): bool =
-    ## Determine if current TokenKind is TK_EOF
-    result = token.kind == TK_EOF
-
-proc isChildOf[T: TokenTuple](token: T, parentToken: T): bool =
-    result = token.pos > parentToken.pos 
-
-proc startBracket[P: Parser](p: var P, bracket: BracketType) =
-    ## Open either a Curly or Square bracket
-    p.brackets[p.prev.line] = bracket
-    case p.brackets[p.prev.line]:
-        of Curly: p.contents.add("{")
-        of Square: p.contents.add("[")
-        else: discard
-
-proc endBracket[P: Parser](p: var P, lineno = -1) =
-    ## Close a bracket based on given line number
-    var lineNumber = if lineno == -1: p.curr.line else: lineno
-    if p.brackets.len != 0:
-        if p.brackets.hasKey(lineNumber):
-            let bk = p.brackets[lineNumber]
-            case bk:
-            of Curly, Square:
-                if bk == Curly: p.contents.add("}")
-                else:           p.contents.add("]")
-                p.brackets.del(lineNumber)
-                if not p.next.isEOF():
-                    p.contents.add(",")
-            else: discard
-
-proc endBrackets[P: Parser](p: var P, maxLevel = 0) =
-    var bklen = p.brackets.len
-    if bklen == 0: return
-    p.brackets.sort(system.cmp, order = SortOrder.Descending)
-    for lineNumber, bk in p.brackets.pairs():
-        case bk:
-        of Curly, Square:
-            if bk == Curly: p.contents.add("}")
-            else:           p.contents.add("]")
-            if not p.next.isEOF():
-                p.contents.add(",")
-        else: discard
-    p.brackets.clear()
-
-template jump[P: Parser](p: var P, offset = 1): untyped =
+proc walk(p: var Parser, offset = 1) =
     var i = 0
     while offset > i:
         inc i
         p.prev = p.curr
         p.curr = p.next
         p.next = p.lex.getToken()
-        while p.next.kind == TK_COMMENT:
-            p.next = p.lex.getToken()
+        # while p.next.kind == TK_COMMENT:
+        #     p.next = p.lex.getToken()
 
-proc expect(kind, expectKind: TokenKind): bool =
-    ## Determine if token kind is as expected
-    result = kind == expectKind
+proc getContents*(p: var Parser): string = $p.contents
 
-proc expect(kind: TokenKind, expectKind: set[TokenKind]): bool =
-    ## Determine if token kind is in given given set
-    result = kind in expectKind
+template `$$`(value: string) = add p.contents, "\"" & value & "\":"
+template `$=`(value: string) = add p.contents, "\"" & value & "\""
+template `$=`(value: bool) = add p.contents, $value
+template `$=`(value: int) = add p.contents, $value
+proc `$`(program: Program): string = pretty toJson(program), 2
 
-proc j(value: string): string =
-    result = "\"" & value & "\""
+template `!`(nextBlock) =
+    if p.curr.kind in literals:
+        if p.curr.line != this.line:
+            p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
+            return
+    nextBlock
 
-proc j(value: string, isKey: bool): string =
-    result = "\"" & value & "\":"
-
-template writeKey[T: Parser](p: var T) =
-    var skipJump = false
-    let keyToken = p.curr
-    p.contents.add j(keyToken.value, true)
-    jump p
-    if p.next.kind.expect(TK_HYPHEN):
-        if p.curr.line == p.next.line:
-            p.setError("Bad nest for array declaration")
-            break
-        jump p
-        if not p.next.kind.expect(getAssignableTokens()):
-            p.setError("Invalid value assignment for array declaration")
-            break
-        p.inArray = true
-        p.lastArray.add(p.curr.line)
-        p.startBracket(Square)
-    elif p.next.kind == TK_IDENTIFIER and p.curr.line == p.next.line:
-        # TODO support unquoted string assignments
-        let tk = p.next
-        var tkValue: string
-        jump p
-        while true:
-            if p.curr.line == keyToken.line and p.curr.kind in getAssignableTokens():
-                if p.next.line != keyToken.line:
-                    tkValue = tkValue & indent(p.curr.value, 1)
-                    break
-                else:
-                    add tkValue, indent(p.curr.value, 1)
-                jump p
-            else: break
-        p.curr.value = tkValue.strip()
-        p.curr.kind = TK_STRING
-        skipJump = true
-    elif not p.next.kind.expect(getAssignableTokens()):
-        p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
+template `!!`(nextBlock) =
+    if p.curr.col < this.col:
+        p.setError("Invalid indentation in array for \"$1\" item" % [p.next.value])
         break
-    if not skipJump:
-        if p.next.isKey() and p.next.pos == keyToken.pos:
-            p.setError("Missing value assignment for \"$1\" identifier" % [keyToken.value])
-            break
-        jump p
+    nextBlock
 
-    if p.curr.isKey() and p.curr.isChildOf(keyToken):
-        p.startBracket(Curly)
-        p.lastParent.add(keyToken)
-    p.lastKey = keyToken
+template `{`(subNode) =
+    p.contents &= "{"
+    subNode
 
-template writeBool[T: Parser](p: var T) =
-    p.contents.add(p.curr.value)
+template `}`() =
+    p.contents &= "}"
 
-template writeString[T: Parser](p: var T) =
-    p.contents.add j(p.curr.value)
+template `[`(subNode) =
+    p.contents &= "["
+    subNode
+template `]`() = p.contents &= "]"
 
-template writeInt[T: Parser](p: var T) =
-    p.contents.add p.curr.value
-
-template writeLiteralSnippet[P: Parser](p: var P) =
-    if p.curr.isBool:       p.writeBool()
-    elif p.curr.isString:   p.writeString()
-    elif p.curr.isInt:      p.writeInt()
-
-template writeLiteral[T: Parser](p: var T) =
-    p.writeLiteralSnippet
-    if p.next.isKey():
-        if p.next.pos > p.lastKey.pos:
-            p.setError("Invalid nesting after closing literal")
-            break
-    if p.next.isEOF():
-        p.endBrackets()
-    else:
-    
-        if p.lastParent.len != 0:
-            let getLastParent = p.lastParent[^1]
-            if p.next.isKey() and p.next.isChildOf(getLastParent) == false:
-                if p.lastKey.pos == getLastParent.pos:
-                    p.contents.add(",")
-                else:
-                    var i = 0
-                    let parentPos = getLastParent.pos
-                    let currPos = p.next.pos
-                    if currPos == 0 and parentPos != 0:
-                        let lastParentLen = p.lastParent.len
-                        if not p.next.isEOF() and lastParentLen != 0:
-                            while i < lastParentLen:
-                                inc i
-                                p.endBracket(p.lastParent[^1].line)
-                                p.lastParent.delete(p.lastParent.high)
-                            i = 0
-                        else:
-                            p.endBracket(p.lastParent[^1].line)
-                            p.lastParent.delete(p.lastParent.high)
-                    elif currPos == 0 and parentPos == 0:
-                        p.endBracket(p.lastParent[^1].line)
-                        p.lastParent.delete(p.lastParent.high)
-                    else:
-                        i = 0
-                        let levels = int(parentPos / currPos)
-                        while i < levels:
-                            inc i
-                            p.endBracket(p.lastParent[^1].line)
-                            p.lastParent.delete(p.lastParent.high)
-                        i = 0
-        if p.next.isKey():
-            if p.next.pos == p.lastKey.pos:
-                if not p.inArray: p.contents.add(",")
-        if p.next.kind != TK_HYPHEN and p.inArray == true:
-            p.inArray = false
-            p.endBracket(p.lastArray[^1] - 1)
-            p.lastArray.delete(p.lastArray.high)
-        elif p.inArray:
-            p.contents.add(",")
-    jump p
-
-proc walk[P: Parser](p: var P) =
-    while p.hasError == false and p.lex.hasError == false:
-        if p.curr.isEOF(): break
-        case p.curr.kind:
-            of TK_IDENTIFIER:
-                var initKey = p.curr
-                if p.next.kind.expect TK_SLASH:
-                    var key: seq[string]
-                    while true:
-                        if p.curr.kind.expect TK_IDENTIFIER:
-                            key.add p.curr.value
-                        elif p.curr.kind.expect TK_SLASH:
-                            jump p
-                            continue
-                        if p.next.kind.expect TK_COLON:
-                            p.curr.value = join(key, "/")
-                            p.curr.pos = initKey.pos
-                            break
-                        jump p
-                p.writeKey()
-            of TK_HYPHEN:
-                p.inArray = true
-                jump p
-            of getLiteral():
-                if p.next.kind.expect(TK_COLON):
-                    p.curr.kind = TK_IDENTIFIER
-                    continue
-                p.writeLiteral()
-            of TK_COMMENT:
-                jump p
+proc writeNodes(p: var Parser, node: seq[Node]) =
+    # Parse AST nodes and write JSON (strings)
+    let nodeLen = node.len - 1 
+    for i in 0 .. nodeLen:
+        case node[i].ntype:
+        of Object:
+            if node[i].value.len != 1:
+                $$ node[i].key
+                `{`:
+                    p.writeNodes(node[i].value)
+                `}`
+            elif node[i].value[0].ntype == Object:
+                $$ node[i].key
+                `{`:
+                    p.writeNodes(node[i].value)
+                `}`
             else:
-                raise newException(NymlException, "Unexpected token " & p.curr.value)
+                $$ node[i].key
+                p.writeNodes(node[i].value)
+        of Array:
+            `[`:
+                p.writeNodes(node[i].items)
+            `]`
+        of Bool:
+            $= node[i].boolv
+        of Int:
+            $= node[i].intv
+        of String:
+            $= node[i].strv
+        of Nil:
+            p.contents &= "null"
+        else: discard
+        if i != nodeLen:
+            if node[i].ntype != Comment:
+                p.contents &= ","
 
-proc getContents*[P: Parser](p: var P): string = 
-    ## Retrieve parsed YAML as JSON string
-    result = $p.contents
+proc newNode(p: var Parser, ntype: NType): Node =
+    Node(ntype: ntype, meta: (line: p.curr.line, col: p.curr.col))
 
-proc parseYAML*(yamlContents: string): Parser =
-    var p: Parser = Parser(lex: Lexer.init(yamlContents))
-    p.curr  = p.lex.getToken()
-    p.next  = p.lex.getToken()
+proc parse(p: var Parser): Node =
+    # Parse YAML to AST nodes
+    let this = p.curr
+    case p.curr.kind:
+    of TK_IDENTIFIER:
+        result = p.newNode Object
+        result.key = p.curr.value
+        walk p, 2 # :
+        p.lvl[this.col] = result
+        if p.curr.kind in literals:
+            ! result.value.add p.parse()
+        elif p.curr.kind in {TK_IDENTIFIER, TK_HYPHEN} and p.curr.col > this.col:
+            while p.curr.col > this.col and p.curr.kind in {TK_IDENTIFIER, TK_HYPHEN}:
+                if p.curr.kind == TK_IDENTIFIER and p.next.kind != TK_COLON:
+                    p.setError("Missing assignment token")
+                    break
+                let sub = p.parse()
+                result.value.add sub
+                if p.curr.col > sub.meta.col and p.curr.kind notin {TK_EOF, TK_HYPHEN}:
+                    p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
+                    break
+        elif p.curr.kind == TK_LBR:
+            result.value.add(p.parse())
+    of TK_STRING:
+        result = p.newNode String
+        result.strv = p.curr.value
+        walk p
+    of TK_INTEGER:
+        result = p.newNode Int
+        result.intv = parseInt(p.curr.value)
+        walk p
+    of TK_TRUE:
+        result = p.newNode Bool
+        result.boolv = true
+        walk p
+    of TK_FALSE:
+        result = p.newNode Bool
+        result.boolv = false
+        walk p
+    of TK_LBR:
+        result = p.newNode Array
+        walk p
+        while p.curr.kind != TK_RBR and (p.curr.line == this.line):
+            if p.curr.kind == TK_EOF:
+                p.setError("EOF reached before closing array")
+                break
+            result.items.add p.parse()
+            if p.curr.kind != TK_RBR:
+                if p.curr.kind == TK_COMMA and p.next.kind in literals:
+                    walk p
+                else:
+                    p.setError("Invalid array item $1" % [p.curr.value])
+        walk p
+    of TK_HYPHEN:
+        result = p.newNode Array
+        while p.curr.kind == TK_HYPHEN:
+            `!!`:
+                walk p
+                result.items.add(p.parse())
+    of TK_COMMENT:
+        result = p.newNode Comment
+        walk p
+    of TK_NULL, TK_NIL:
+        result = p.newNode Nil
+        walk p
+    else: discard
 
-    p.contents.add("{")
-    p.walk()
-    p.contents.add("}")
+proc parseYAML*(strContents: string): Parser =
+    var p = Parser(lex: Lexer.init(strContents))
+    p.curr = p.lex.getToken()
+    p.next = p.lex.getToken()
+    p.program = Program()
+    while p.hasError == false and p.lex.hasError == false:
+        if p.curr.kind == TK_EOF: break
+        if p.curr.kind == TK_HYPHEN:
+            p.rootType = Array
+        else:
+            p.rootType = Object
+        p.program.nodes.add p.parse()
+    if p.rootType == Array:
+        p.writeNodes(p.program.nodes)
+    else:
+        p.contents &= "{"
+        p.writeNodes(p.program.nodes)
+        p.contents &= "}"
     result = p
-    p.lex.close()
