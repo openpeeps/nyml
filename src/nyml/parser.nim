@@ -254,7 +254,7 @@ proc parse(p: var Parser, initNewObject = false): Node =
   else: discard
 
 proc parseYAML*(strContents: string): Parser =
-  var p = Parser(lex: Lexer.init(strContents))
+  var p = Parser(lex: Lexer.init(strContents, allowMultilineStrings = true))
   p.curr = p.lex.getToken()
   p.next = p.lex.getToken()
   p.program = Program()
