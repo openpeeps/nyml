@@ -1,3 +1,9 @@
+# A stupid simple YAML parser. From YAML to Nim objects, JsonNode or stringified JSON
+# 
+# (c) 2023 Nyml | MIT License
+#          Made by Humans from OpenPeep
+#          https://github.com/openpeep/nyml
+
 import toktok
 import std/[ropes, tables, json, jsonutils]
 
@@ -239,11 +245,6 @@ proc parse(p: var Parser, initNewObject = false): Node =
           newObject.value.add(p.parse())
       if not skip:
         result.items.add(newObject)
-    # if p.curr.kind != TK_EOF and p.curr.col > this.col and p.curr.col - this.col in [2, 4]:
-    #   let newObject = p.newNode Object
-    #   while p.curr.kind != TK_EOF and p.curr.col > this.col and p.curr.col - this.col in [2, 4]:
-    #     newObject.value.add(p.parse())
-    #   result.items.add(newObject)
   of TK_COMMENT:
     result = p.newNode Comment
     walk p
