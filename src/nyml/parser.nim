@@ -233,6 +233,13 @@ proc parse(p: var Parser): Node =
     var skip: bool
     walk p
     if p.curr.kind != TK_EOF:
+      if p.curr.kind in literals:
+        let arritem = p.prev
+        result.items.add p.parse()
+        while p.curr.kind == TK_HYPHEN and p.curr.col == arritem.col:
+          walk p
+          result.items.add p.parse()
+        return
       var newObject = p.newNode Object
       while p.curr.kind != TK_EOF:
         if p.curr.col < this.col:
@@ -248,6 +255,8 @@ proc parse(p: var Parser): Node =
           newObject.value.add(p.parse())
       if not skip:
         result.items.add(newObject)
+    else:
+      p.setError("EOF reached before closing array item")
   of TK_COMMENT:
     result = p.newNode Comment
     walk p
@@ -268,6 +277,7 @@ proc parseYAML*(strContents: string): Parser =
     else:
       p.rootType = Object
     p.program.nodes.add p.parse()
+  #echo p.program
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
