@@ -138,9 +138,12 @@ proc writeNodes(p: var Parser, node: seq[Node], withObjects = false) =
     of Object:
       if node[i].key.len != 0:
         $$ node[i].key
-      `{`:
+      if node[i].value[0].ntype == Array:
         p.writeNodes(node[i].value)
-      `}`
+      else:
+        `{`:
+          p.writeNodes(node[i].value)
+        `}`
     of Field:
         $$ node[i].fieldKey
         p.writeNodes(node[i].fieldValue)
@@ -165,13 +168,13 @@ proc newNode(p: var Parser, ntype: NType): Node =
   Node(nodeName: ntype.symbolName, ntype: ntype,
     meta: (line: p.curr.line, col: p.curr.col))
 
-proc parse(p: var Parser, initNewObject = false): Node =
+proc parse(p: var Parser): Node =
   # Parse YAML to AST nodes
   let this = p.curr
   case p.curr.kind:
   of TK_IDENTIFIER:
     walk p
-    if not initNewObject and p.next.kind in literals:
+    if p.next.kind in literals:
       result = p.newNode Field
       result.fieldKey = this.value
       walk p
