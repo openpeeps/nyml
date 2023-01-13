@@ -11,7 +11,12 @@ from std/strutils import parseInt, parseBool, `%`, indent
 from std/enumutils import symbolName
 
 static:
-  Program.settings(true, "TK_")
+  Program.settings(
+    uppercase = true,
+    prefix = "TK_",
+    allowUnknown = true,
+    keepUnknownChars = true
+  )
 
 handlers:
   proc handleAltString*(lex: var Lexer, kind: TokenKind) =
@@ -40,7 +45,6 @@ tokens:
   COLON > ':'
   COMMA > ','
   HYPHEN > '-'
-  SLASH  > '/'
   ALT_STRING > tokenize(handleAltString, '\'')
   BACKSLASH > '\\'
   COMMENT > '#' .. EOL
@@ -191,29 +195,35 @@ proc newNode(p: var Parser, ntype: NType): Node =
   Node(nodeName: ntype.symbolName, ntype: ntype,
     meta: (line: p.curr.line, col: p.curr.col))
 
+template handleUnquotedStrings() =
+  walk p
+  while p.curr.kind != TK_EOF and p.curr.line == parent.line:
+    identToStr.value &= indent(p.curr.value, p.curr.wsno)
+    walk p
+  strNode.strv = identToStr.value
+  # strNode.meta = (identToStr.line, identToStr.col)
+
 proc parse(p: var Parser): Node =
   # Parse YAML to AST nodes
   let this = p.curr
   case p.curr.kind:
   of TK_IDENTIFIER:
-    walk p
+    walk p # :
     if p.next.kind in literals:
       result = p.newNode Field
       result.fieldKey = this.value
       walk p # :
       result.fieldValue.add(p.parse())
-    elif p.next.kind == TK_IDENTIFIER and p.next.line == this.line:
+    elif p.next.kind != TK_EOF and p.next.line == this.line:
       walk p # :
+      if p.curr.kind == TK_COLON:
+        p.setError("Unexpected token")
       result = p.newNode Field
       result.fieldKey = this.value
-      var identToStr = p.curr
-      walk p
-      while p.curr.kind != TK_EOF and p.curr.line == this.line:
-        identToStr.value &= indent(p.curr.value, 1)
-        walk p
+      let parent = this
       let strNode = p.newNode String
-      strNode.strv = identToStr.value
-      strNode.meta = (identToStr.line, identToStr.col)
+      var identToStr = p.curr
+      handleUnquotedStrings()
       result.fieldValue.add strNode
     else:
       result = p.newNode Object
@@ -275,16 +285,21 @@ proc parse(p: var Parser): Node =
         result.items.add p.parse()
       elif p.curr.kind == TK_IDENTIFIER:
         if p.next.kind != TK_COLON:
-          p.setError("Missing assignment token")
-          break
-        var nobj = p.newNode Object
-        nobj.value.add p.parse()
-        while p.curr.kind == TK_IDENTIFIER and p.curr.col > tkHyphen.col:
-          nobj.value.add p.parse() 
-        result.items.add nobj
-    if p.curr.kind notin {TK_HYPHEN, TK_EOF}:
+          # handle unquoted strings
+          let parent = tkHyphen
+          let strNode = p.newNode String
+          var identToStr = p.curr
+          handleUnquotedStrings()
+          result.items.add strNode
+        else:
+          var nobj = p.newNode Object
+          nobj.value.add p.parse()
+          while p.curr.kind == TK_IDENTIFIER and p.curr.col > tkHyphen.col:
+            nobj.value.add p.parse() 
+          result.items.add nobj
+    if p.curr.kind notin {TK_HYPHEN, TK_EOF} and p.curr.col == tkHyphen.col:
       if p.curr.col == tkHyphen.col:
-        p.setError("Invalid identation")
+        p.setError("Invalid indentation")
   of TK_COMMENT:
     result = p.newNode Comment
     walk p
