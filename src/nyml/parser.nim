@@ -7,11 +7,32 @@
 import toktok
 import std/[ropes, tables, json, jsonutils]
 
-from std/strutils import parseInt, parseBool, `%`
+from std/strutils import parseInt, parseBool, `%`, indent
 from std/enumutils import symbolName
 
 static:
   Program.settings(true, "TK_")
+
+handlers:
+  proc handleAltString*(lex: var Lexer, kind: TokenKind) =
+    lex.startPos = lex.getColNumber(lex.bufpos)
+    setLen(lex.token, 0)
+    inc lex.bufpos
+    while true:
+      case lex.buf[lex.bufpos]
+      of '\'':
+        lex.kind = kind
+        inc lex.bufpos
+        break
+      of NewLines:
+        lex.setError("EOL reached before end of string")
+        return
+      of EndOfFile:
+        lex.setError("EOF reached before end of string")
+        return
+      else:
+        add lex.token, lex.buf[lex.bufpos]
+        inc lex.bufpos
 
 tokens:
   LBR   > '['
@@ -20,12 +41,13 @@ tokens:
   COMMA > ','
   HYPHEN > '-'
   SLASH  > '/'
+  ALT_STRING > tokenize(handleAltString, '\'')
   BACKSLASH > '\\'
   COMMENT > '#' .. EOL
   NIL   > {"NIL", "Nil", "nil"}
   NULL  > {"NULL", "Null", "null"}
-  TRUE  > {"TRUE", "True", "true", "YES", "Yes", "yes", "y"}
-  FALSE > {"FALSE", "False", "false", "NO", "No", "no", "n"}
+  TRUE  > {"TRUE", "True", "true", "YES", "Yes", "yes"}
+  FALSE > {"FALSE", "False", "false", "NO", "No", "no"}
 
 type
   NType = enum
@@ -76,7 +98,7 @@ type
 
 const
   assignables = {TK_STRING, TK_INTEGER, TK_TRUE, TK_FALSE, TK_IDENTIFIER}
-  literals = {TK_STRING, TK_INTEGER, TK_TRUE, TK_FALSE, TK_NIL, TK_NULL}
+  literals = {TK_STRING, TK_ALT_STRING, TK_INTEGER, TK_TRUE, TK_FALSE, TK_NIL, TK_NULL}
 
 proc setError[T: Parser](p: var T, msg: string) =
   p.error = "Error ($2:$3): $1" % [msg, $p.curr.line, $p.curr.pos]
@@ -104,6 +126,7 @@ template `$=`(value: string) = add p.contents, "\"" & value & "\""
 template `$=`(value: bool) = add p.contents, $value
 template `$=`(value: int) = add p.contents, $value
 proc `$`(program: Program): string = pretty toJson(program), 2
+proc `$`(node: Node): string = pretty toJson(node), 2
 
 template `!`(nextBlock) =
   if p.curr.kind in literals:
@@ -177,8 +200,21 @@ proc parse(p: var Parser): Node =
     if p.next.kind in literals:
       result = p.newNode Field
       result.fieldKey = this.value
-      walk p
+      walk p # :
       result.fieldValue.add(p.parse())
+    elif p.next.kind == TK_IDENTIFIER and p.next.line == this.line:
+      walk p # :
+      result = p.newNode Field
+      result.fieldKey = this.value
+      var identToStr = p.curr
+      walk p
+      while p.curr.kind != TK_EOF and p.curr.line == this.line:
+        identToStr.value &= indent(p.curr.value, 1)
+        walk p
+      let strNode = p.newNode String
+      strNode.strv = identToStr.value
+      strNode.meta = (identToStr.line, identToStr.col)
+      result.fieldValue.add strNode
     else:
       result = p.newNode Object
       result.key = this.value
@@ -198,7 +234,7 @@ proc parse(p: var Parser): Node =
             break
       elif p.curr.kind == TK_LBR:
         result.value.add(p.parse())
-  of TK_STRING:
+  of TK_STRING, TK_ALT_STRING:
     result = p.newNode String
     result.strv = p.curr.value
     walk p
@@ -227,36 +263,28 @@ proc parse(p: var Parser): Node =
           walk p
         else:
           p.setError("Invalid array item $1" % [p.curr.value])
+          break
     walk p
   of TK_HYPHEN:
     result = p.newNode Array
-    var skip: bool
-    walk p
-    if p.curr.kind != TK_EOF:
+    var tkHyphen = this
+    while p.curr.kind == TK_HYPHEN:
+      tkHyphen = p.curr
+      walk p
       if p.curr.kind in literals:
-        let arritem = p.prev
         result.items.add p.parse()
-        while p.curr.kind == TK_HYPHEN and p.curr.col == arritem.col:
-          walk p
-          result.items.add p.parse()
-        return
-      var newObject = p.newNode Object
-      while p.curr.kind != TK_EOF:
-        if p.curr.col < this.col:
+      elif p.curr.kind == TK_IDENTIFIER:
+        if p.next.kind != TK_COLON:
+          p.setError("Missing assignment token")
           break
-        elif p.curr.kind == TK_HYPHEN and p.curr.col == this.col:
-          walk p
-          skip = true
-          result.items.add(newObject)
-          newObject = p.newNode Object
-          newObject.value.add(p.parse())
-        else:
-          skip = false
-          newObject.value.add(p.parse())
-      if not skip:
-        result.items.add(newObject)
-    else:
-      p.setError("EOF reached before closing array item")
+        var nobj = p.newNode Object
+        nobj.value.add p.parse()
+        while p.curr.kind == TK_IDENTIFIER and p.curr.col > tkHyphen.col:
+          nobj.value.add p.parse() 
+        result.items.add nobj
+    if p.curr.kind notin {TK_HYPHEN, TK_EOF}:
+      if p.curr.col == tkHyphen.col:
+        p.setError("Invalid identation")
   of TK_COMMENT:
     result = p.newNode Comment
     walk p
@@ -277,7 +305,7 @@ proc parseYAML*(strContents: string): Parser =
     else:
       p.rootType = Object
     p.program.nodes.add p.parse()
-  #echo p.program
+  # echo p.program
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
