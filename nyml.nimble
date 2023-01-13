@@ -16,4 +16,4 @@ task tests, "Run test":
 
 task dev, "compile nyml":
     echo "\n✨ Compiling..." & "\n"
-    exec "nim --gc:arc --out:bin/nyml --hints:off --threads:on c src/nyml.nim"
+    exec "nim --gc:arc --out:bin/nyml --hints:off -d:toktokdebug --threads:on c src/nyml.nim"
