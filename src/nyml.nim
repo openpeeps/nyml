@@ -30,9 +30,9 @@ proc toJson*(n: Nyml): Document =
   ## Parse YAML contents to JsonNode without content rules
   var p: Parser = n.parse()
   if p.hasError():
-    raise newException(NymlException, p.getError)
+    raise newException(YAMLException, p.getError)
   elif p.lex.hasError():
-    raise newException(NymlException, p.lex.getError)
+    raise newException(YAMLException, p.lex.getError)
   else:
     result = Document(contents: parseJson(p.getContents()))
 
@@ -40,9 +40,9 @@ proc toJsonStr*(n: Nyml, prettyPrint = false, indent = 2): string =
   ## YAML parser to JSON string representation without rules checker
   var p: Parser = n.parse()
   if p.hasError():
-    raise newException(NymlException, p.getError)
+    raise newException(YAMLException, p.getError)
   elif p.lex.hasError():
-    raise newException(NymlException, p.lex.getError)
+    raise newException(YAMLException, p.lex.getError)
   else:
     if prettyPrint:
       result = pretty(parseJson(p.getContents()), indent)
@@ -66,9 +66,9 @@ when requires "jsony":
     var yml = Nyml.init(strContents)
     var p: Parser = yml.parse()
     if p.hasError():
-      raise newException(NymlException, p.getError)
+      raise newException(YAMLException, p.getError)
     elif p.lex.hasError():
-      raise newException(NymlException, p.lex.getError)
+      raise newException(YAMLException, p.lex.getError)
     else:
       var parsedContents = p.getContents()
       parsedContents.fromJson(toObject)
