@@ -18,11 +18,42 @@ _If you need a YAML 1.2 compatible library go with [flyx's NimYAML](https://gith
 nimble install nyml
 ```
 
+## Example
+
+<details>
+  <summary>A simple YAML file</summary>
+
 ```yaml
-app:
-  name: "My app"
-  port: 9933
+name: test
+on:
+  push:
+    paths-ignore:
+      - LICENSE
+      - README.*
+  pull_request:
+    paths-ignore:
+      - LICENSE
+      - README.*
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nim-version:
+          - 'stable'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: jiro4989/setup-nim-action@v1
+        with:
+          nim-version: ${{ matrix.nim-version }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nimble install -Y
+      - run: nim --threads:on c -r src/tim.nim
+      - run: nimble test
+
 ```
+
+</details>
 
 ### Get JSON document
 ```nim
@@ -38,9 +69,7 @@ echo port.getInt
 
 ### Dump YAML to JSON string
 ```nim
-
-let str = yaml(contents)
-echo str
+echo yaml(contents)
 
 # dump to json with indentation
 echo yaml(contents, true)
