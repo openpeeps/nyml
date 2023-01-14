@@ -220,111 +220,111 @@ proc parseUnquotedStrings(p: var Parser, this: TokenTuple): Node =
   handleUnquotedStrings()
   result = strNode
 
-proc parse(p: var Parser, getNode = false): Node =
+proc parse(p: var Parser): Node
+
+proc parseString(p: var Parser): Node =
+  result = p.newNode String
+  result.strv = p.curr.value
+  walk p
+
+proc parseInt(p: var Parser): Node =
+  result = p.newNode Int
+  result.intv = parseInt(p.curr.value)
+  walk p
+
+proc parseBool(p: var Parser, lit: bool): Node =
+  result = p.newNode Bool
+  result.boolv = lit
+  walk p
+
+proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
+  while p.curr.kind == TK_HYPHEN and p.curr.col == node.meta.col:
+    walk p
+    if p.curr.kind in literals:
+      node.items.add p.parse()
+    elif p.curr.kind == TK_IDENTIFIER:
+      if p.next.kind != TK_COLON:
+        # handle unquoted strings.
+        # this should handle any kind of characters
+        node.items.add p.parseUnquotedStrings(p.curr)
+      else:
+        # handle objects 
+        let objectNode = p.newNode Object
+        let subNode = p.parse()
+        objectNode.value.add(subNode)
+        node.items.add objectNode
+        while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
+          objectNode.value.add p.parse()
+
+proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
+  result = p.newNode Array
+  walk p
+  while p.curr.kind != TK_RBR and (p.curr.line == this.line):
+    if p.curr.kind == TK_EOF:
+      p.setError("EOF reached before closing array")
+      break
+    result.items.add p.parse()
+    if p.curr.kind != TK_RBR:
+      if p.curr.kind == TK_COMMA and p.next.kind in literals:
+        walk p
+      else:
+        p.setError("Invalid array item $1" % [p.curr.value])
+        break
+  walk p
+
+proc parseObject(p: var Parser, this: TokenTuple): Node =
+  walk p # :
+  if p.next.kind in literals:
+    result = p.newNode(Field, this)
+    result.fieldKey = this.value
+    walk p
+    result.fieldValue.add(p.parse())
+  elif p.next.kind != TK_EOF and p.next.line == this.line:
+    walk p # :
+    if p.curr.kind == TK_COLON:
+      p.setError("Unexpected token")
+    result = p.newNode(Field, this)
+    result.fieldKey = this.value
+    result.fieldValue.add p.parseUnquotedStrings(this)
+  else:
+    result = p.newNode(Object, this)
+    result.key = this.value
+    walk p
+    if p.curr.kind in literals:
+      ! result.value.add p.parse()
+    elif p.curr.kind in {TK_IDENTIFIER, TK_HYPHEN} and p.curr.col > this.col:
+      while p.curr.col > this.col and p.curr.kind in {TK_IDENTIFIER, TK_HYPHEN}:
+        if p.curr.kind == TK_IDENTIFIER and p.next.kind != TK_COLON:
+          p.setError("Missing assignment token")
+          break
+        let sub = p.parse()
+        result.value.add sub
+        if p.curr.col > sub.meta.col and p.curr.kind notin {TK_EOF, TK_HYPHEN}:
+          p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
+          break
+    elif p.curr.kind == TK_LBR:
+      result.value.add(p.parse())
+
+proc parse(p: var Parser): Node =
   # Parse YAML to AST nodes
   let this = p.curr
   case p.curr.kind:
   of TK_IDENTIFIER:
-    walk p # :
-    if p.next.kind in literals:
-      result = p.newNode(Field, this)
-      result.fieldKey = this.value
-      walk p
-      result.fieldValue.add(p.parse())
-    elif p.next.kind != TK_EOF and p.next.line == this.line:
-      walk p # :
-      if p.curr.kind == TK_COLON:
-        p.setError("Unexpected token")
-      result = p.newNode(Field, this)
-      result.fieldKey = this.value
-      result.fieldValue.add p.parseUnquotedStrings(this)
-    else:
-      result = p.newNode(Object, this)
-      result.key = this.value
-      walk p
-      # p.lvl[this.col] = result
-      if p.curr.kind in literals:
-        ! result.value.add p.parse()
-      elif p.curr.kind in {TK_IDENTIFIER, TK_HYPHEN} and p.curr.col > this.col:
-        while p.curr.col > this.col and p.curr.kind in {TK_IDENTIFIER, TK_HYPHEN}:
-          if p.curr.kind == TK_IDENTIFIER and p.next.kind != TK_COLON:
-            p.setError("Missing assignment token")
-            break
-          let sub = p.parse()
-          result.value.add sub
-          if p.curr.col > sub.meta.col and p.curr.kind notin {TK_EOF, TK_HYPHEN}:
-            p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
-            break
-      elif p.curr.kind == TK_LBR:
-        result.value.add(p.parse())
-  of TK_STRING, TK_ALT_STRING:
-    result = p.newNode String
-    result.strv = p.curr.value
-    walk p
-  of TK_INTEGER:
-    result = p.newNode Int
-    result.intv = parseInt(p.curr.value)
-    walk p
-  of TK_TRUE:
-    result = p.newNode Bool
-    result.boolv = true
-    walk p
-  of TK_FALSE:
-    result = p.newNode Bool
-    result.boolv = false
-    walk p
-  of TK_LBR:
-    result = p.newNode Array
-    walk p
-    while p.curr.kind != TK_RBR and (p.curr.line == this.line):
-      if p.curr.kind == TK_EOF:
-        p.setError("EOF reached before closing array")
-        break
-      result.items.add p.parse()
-      if p.curr.kind != TK_RBR:
-        if p.curr.kind == TK_COMMA and p.next.kind in literals:
-          walk p
-        else:
-          p.setError("Invalid array item $1" % [p.curr.value])
-          break
-    walk p
+    result = p.parseObject(this)
   of TK_HYPHEN:
-    var node: Node = p.newNode(Array)
-    walk p
-    while true:
-      if node.meta.col > p.curr.col:
-        break
-      if p.curr.kind in literals:
-        node.items.add p.parse()
-        if p.curr.kind == TK_HYPHEN:
-          if p.curr.col == node.meta.col:
-            walk p
-          elif p.curr.col > node.meta.col:
-            p.setError("Invalid indentation")
-            break
-      elif p.curr.kind == TK_IDENTIFIER:
-        if p.next.kind != TK_COLON:
-          # handle unquoted strings.
-          # this should handle any kind of characters
-          node.items.add p.parseUnquotedStrings(p.curr)
-          if p.curr.kind == TK_HYPHEN and p.curr.col == this.col:
-            walk p
-          else: break
-        else:
-          let objectNode = p.newNode Object
-          let subNode = p.parse()
-          objectNode.value.add(subNode)
-          while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
-            objectNode.value.add p.parse()
-          node.items.add objectNode
-          if p.curr.kind == TK_HYPHEN:
-            walk p
-          elif p.curr.kind == TK_IDENTIFIER and p.curr.col == this.col:
-            p.setError("Bad indentation of a mapping entry \"$1\"" % [p.curr.value])
-            break
-      else:
-        break
+    var node: Node = p.newNode Array
+    p.parseArray(node, this)
     result = node
+  of TK_STRING, TK_ALT_STRING:
+    result = p.parseString()
+  of TK_INTEGER:
+    result = p.parseInt()
+  of TK_TRUE:
+    result = p.parseBool true
+  of TK_FALSE:
+    result = p.parseBool false
+  of TK_LBR:
+    result = p.parseInlineArray(this)
   of TK_COMMENT:
     result = p.newNode Comment
     walk p
