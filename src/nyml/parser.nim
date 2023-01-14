@@ -192,8 +192,18 @@ proc writeNodes(p: var Parser, node: seq[Node], withObjects = false) =
         p.contents &= ","
 
 proc newNode(p: var Parser, ntype: NType): Node =
-  Node(nodeName: ntype.symbolName, ntype: ntype,
-    meta: (line: p.curr.line, col: p.curr.col))
+  result = Node(
+    ntype: ntype,
+    nodeName: ntype.symbolName,
+    meta: (p.curr.line, p.curr.col)
+  )
+
+proc newNode(p: var Parser, ntype: NType, tk: TokenTuple): Node =
+  result = Node(
+    ntype: ntype,
+    nodeName: ntype.symbolName,
+    meta: (tk.line, tk.col)
+  )
 
 template handleUnquotedStrings() =
   walk p
@@ -203,30 +213,33 @@ template handleUnquotedStrings() =
   strNode.strv = identToStr.value
   # strNode.meta = (identToStr.line, identToStr.col)
 
-proc parse(p: var Parser): Node =
+proc parseUnquotedStrings(p: var Parser, this: TokenTuple): Node =
+  let parent = this
+  let strNode = p.newNode String
+  var identToStr = p.curr
+  handleUnquotedStrings()
+  result = strNode
+
+proc parse(p: var Parser, getNode = false): Node =
   # Parse YAML to AST nodes
   let this = p.curr
   case p.curr.kind:
   of TK_IDENTIFIER:
     walk p # :
     if p.next.kind in literals:
-      result = p.newNode Field
+      result = p.newNode(Field, this)
       result.fieldKey = this.value
-      walk p # :
+      walk p
       result.fieldValue.add(p.parse())
     elif p.next.kind != TK_EOF and p.next.line == this.line:
       walk p # :
       if p.curr.kind == TK_COLON:
         p.setError("Unexpected token")
-      result = p.newNode Field
+      result = p.newNode(Field, this)
       result.fieldKey = this.value
-      let parent = this
-      let strNode = p.newNode String
-      var identToStr = p.curr
-      handleUnquotedStrings()
-      result.fieldValue.add strNode
+      result.fieldValue.add p.parseUnquotedStrings(this)
     else:
-      result = p.newNode Object
+      result = p.newNode(Object, this)
       result.key = this.value
       walk p
       # p.lvl[this.col] = result
@@ -276,30 +289,42 @@ proc parse(p: var Parser): Node =
           break
     walk p
   of TK_HYPHEN:
-    result = p.newNode Array
-    var tkHyphen = this
-    while p.curr.kind == TK_HYPHEN:
-      tkHyphen = p.curr
-      walk p
+    var node: Node = p.newNode(Array)
+    walk p
+    while true:
+      if node.meta.col > p.curr.col:
+        break
       if p.curr.kind in literals:
-        result.items.add p.parse()
+        node.items.add p.parse()
+        if p.curr.kind == TK_HYPHEN:
+          if p.curr.col == node.meta.col:
+            walk p
+          elif p.curr.col > node.meta.col:
+            p.setError("Invalid indentation")
+            break
       elif p.curr.kind == TK_IDENTIFIER:
         if p.next.kind != TK_COLON:
-          # handle unquoted strings
-          let parent = tkHyphen
-          let strNode = p.newNode String
-          var identToStr = p.curr
-          handleUnquotedStrings()
-          result.items.add strNode
+          # handle unquoted strings.
+          # this should handle any kind of characters
+          node.items.add p.parseUnquotedStrings(p.curr)
+          if p.curr.kind == TK_HYPHEN and p.curr.col == this.col:
+            walk p
+          else: break
         else:
-          var nobj = p.newNode Object
-          nobj.value.add p.parse()
-          while p.curr.kind == TK_IDENTIFIER and p.curr.col > tkHyphen.col:
-            nobj.value.add p.parse() 
-          result.items.add nobj
-    if p.curr.kind notin {TK_HYPHEN, TK_EOF} and p.curr.col == tkHyphen.col:
-      if p.curr.col == tkHyphen.col:
-        p.setError("Invalid indentation")
+          let objectNode = p.newNode Object
+          let subNode = p.parse()
+          objectNode.value.add(subNode)
+          while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
+            objectNode.value.add p.parse()
+          node.items.add objectNode
+          if p.curr.kind == TK_HYPHEN:
+            walk p
+          elif p.curr.kind == TK_IDENTIFIER and p.curr.col == this.col:
+            p.setError("Bad indentation of a mapping entry \"$1\"" % [p.curr.value])
+            break
+      else:
+        break
+    result = node
   of TK_COMMENT:
     result = p.newNode Comment
     walk p

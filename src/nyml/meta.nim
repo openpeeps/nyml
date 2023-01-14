@@ -9,7 +9,7 @@ from std/strutils import `%`, contains, count, split, strip,
 export json
 
 type
-  NymlException* = object of CatchableError
+  YAMLException* = object of CatchableError
 
   Nyml* = object
     yamlContents: string
