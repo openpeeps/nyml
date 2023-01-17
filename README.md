@@ -63,8 +63,8 @@ let jsonContents: JsonNode = yaml(contents).toJson.get
 
 ### Get a specific value using `.` notation
 ```nim
-let port: JsonNode = yaml(contents).toJson.get("jobs.test.runs-on")
-echo port.getInt
+let osName: JsonNode = yaml(contents).toJson.get("jobs.test.runs-on")
+echo osName.getStr
 ```
 
 ### Dump YAML to JSON string
