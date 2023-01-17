@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "George Lemon"
 description   = "A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode"
 license       = "MIT"
@@ -16,4 +16,4 @@ task tests, "Run test":
 
 task dev, "compile nyml":
     echo "\n✨ Compiling..." & "\n"
-    exec "nim --gc:arc --out:bin/nyml --hints:off -d:toktokdebug --threads:on c src/nyml.nim"
+    exec "nim --gc:arc --out:bin/nyml --hints:off --threads:on c src/nyml.nim"
