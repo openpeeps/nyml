@@ -35,7 +35,7 @@ proc getYamlContents*(n: Nyml): string {.inline.} =
 proc isPretty*(n: Nyml): bool =
   result = n.prettyPrint
 
-proc get(contents: JsonNode, key: string = "", default: JsonNode = nil): JsonNode = 
+proc get(contents: JsonNode, key: string = ""): JsonNode = 
   ## Access data in current Json document using
   ## dot annotation, user.profile.name
   if key.contains("."):
@@ -48,10 +48,7 @@ proc get(contents: JsonNode, key: string = "", default: JsonNode = nil): JsonNod
         inc i
         tree = get(tree, k[i])
       except KeyError:
-        if default == nil:
-          break
-        else:
-          return default
+        break
     result = tree
   elif key.len == 0:
     result = contents
@@ -59,15 +56,14 @@ proc get(contents: JsonNode, key: string = "", default: JsonNode = nil): JsonNod
     if contents.hasKey(key):
       result = contents[key]
     else:
-      if default == nil:
-        result = newJNull()
-      else: 
-        result = default
+      result = newJNull()
 
 proc get*(doc: Document, key: string = "", default: JsonNode = nil): JsonNode =
   ## Access data in current Json document using dot annotation,
   ## like for example: `user.profile.name`
-  result = get(doc.contents, key, default)
+  result = get(doc.contents, key)
+  if result.kind == JNull:
+    return default
 
 proc exists*(field: JsonNode): bool =
   result = field != nil
