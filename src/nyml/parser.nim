@@ -15,7 +15,8 @@ static:
     uppercase = true,
     prefix = "TK_",
     allowUnknown = true,
-    keepUnknownChars = true
+    keepUnknownChars = true,
+    handleCustomIdent = true
   )
 
 handlers:
@@ -38,6 +39,17 @@ handlers:
       else:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
+
+  proc handleCustomIdent*(lex: var Lexer): TokenKind =
+    let identLineno = lex.lineNumber
+    while identLineno == lex.lineNumber:
+      case lex.buf[lex.bufpos]:
+      of ':', NewLines, EndOfFile:
+        break
+      else:
+        add lex.token, lex.buf[lex.bufpos]
+        inc lex.bufpos
+    result = TK_IDENTIFIER
 
 tokens:
   LBR   > '['
@@ -245,7 +257,7 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
     elif p.curr.kind == TK_IDENTIFIER:
       if p.next.kind != TK_COLON:
         # handle unquoted strings.
-        # this should handle any kind of characters
+        # this should handle any kind of characters          
         node.items.add p.parseUnquotedStrings(p.curr)
       else:
         # handle objects 
@@ -253,9 +265,10 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
         let subNode = p.parse()
         objectNode.value.add(subNode)
         node.items.add objectNode
-        while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
-          objectNode.value.add p.parse()
-
+        # while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
+          # objectNode.value.add p.parse()
+    else:
+      echo p.curr
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   result = p.newNode Array
   walk p
