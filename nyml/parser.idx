@@ -1,0 +1,21 @@
+TokenKind	nyml/parser.html#TokenKind	parser: TokenKind	
+TokenTuple	nyml/parser.html#TokenTuple	parser: TokenTuple	
+Lexer	nyml/parser.html#Lexer	parser: Lexer	
+LexerException	nyml/parser.html#LexerException	parser: LexerException	
+init	nyml/parser.html#init,T,string	parser: init[T: typedesc[Lexer]](lex: T; fileContents: string;\n                         allowMultilineStrings = false): Lexer	
+generateIdentCase	nyml/parser.html#generateIdentCase,Lexer	parser: generateIdentCase(lex: var Lexer)	
+setError	nyml/parser.html#setError,Lexer,string	parser: setError(lex: var Lexer; message: string)	
+hasError	nyml/parser.html#hasError,Lexer	parser: hasError(lex: Lexer): bool	
+getError	nyml/parser.html#getError,Lexer	parser: getError(lex: Lexer): string	
+hasLetters	nyml/parser.html#hasLetters,Lexer,int	parser: hasLetters(lex: var Lexer; pos: int): bool	
+hasNumbers	nyml/parser.html#hasNumbers,Lexer,int	parser: hasNumbers(lex: var Lexer; pos: int): bool	
+skip	nyml/parser.html#skip,Lexer	parser: skip(lex: var Lexer)	
+handleCustomIdent	nyml/parser.html#handleCustomIdent,T,TokenKind	parser: handleCustomIdent[T: Lexer](lex: var T; kind: TokenKind)	
+handleAltString	nyml/parser.html#handleAltString,Lexer,TokenKind	parser: handleAltString(lex: var Lexer; kind: TokenKind)	
+handleCustomIdent	nyml/parser.html#handleCustomIdent,Lexer	parser: handleCustomIdent(lex: var Lexer): TokenKind	
+getToken	nyml/parser.html#getToken,Lexer	parser: getToken(lex: var Lexer): TokenTuple	
+Parser	nyml/parser.html#Parser	parser: Parser	
+hasError	nyml/parser.html#hasError,T	parser: hasError[T: Parser](p: var T): bool	
+getError	nyml/parser.html#getError,T	parser: getError[T: Parser](p: var T): string	
+getContents	nyml/parser.html#getContents,Parser	parser: getContents(p: var Parser): string	
+parseYAML	nyml/parser.html#parseYAML,string	parser: parseYAML(strContents: string): Parser	

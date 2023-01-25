@@ -1,0 +1,12 @@
+YAMLException	nyml/meta.html#YAMLException	meta: YAMLException	
+Nyml	nyml/meta.html#Nyml	meta: Nyml	
+Document	nyml/meta.html#Document	meta: Document	
+init	nyml/meta.html#init,typedesc[N],string	meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false): N	
+getYamlContents	nyml/meta.html#getYamlContents,Nyml	meta: getYamlContents(n: Nyml): string	
+isPretty	nyml/meta.html#isPretty,Nyml	meta: isPretty(n: Nyml): bool	
+get	nyml/meta.html#get,Document,string,JsonNode	meta: get(doc: Document; key: string = &quot;&quot;; default: JsonNode = nil): JsonNode	
+exists	nyml/meta.html#exists,JsonNode	meta: exists(field: JsonNode): bool	
+rules	nyml/meta.html#rules,Document,openArray[tuple[string,JsonNodeKind]]	meta: rules(doc: var Document;\n      docRules: openArray[tuple[key: string, kind: JsonNodeKind]])	
+hasErrors	nyml/meta.html#hasErrors,Document	meta: hasErrors(doc: Document): bool	
+getErrors	nyml/meta.html#getErrors,Document	meta: getErrors(doc: Document): string	
+newDocument	nyml/meta.html#newDocument,JsonNode	meta: newDocument(contents: JsonNode): Document	
