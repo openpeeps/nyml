@@ -2,8 +2,14 @@
     😋 A stupid simple YAML Parser.<br>From <code>YAML</code> to stringified <code>JSON</code> or <code>JsonNode</code>. Written in Nim language 👑
 </p>
 
-_Nyml has no serialization, tags, indicators or any weird things. In fact, Nyml is somewhere between `toml` and `yaml`_
-_If you need a YAML 1.2 compatible library go with [flyx's NimYAML](https://github.com/flyx/NimYAML)._
+## Nim YAML
+
+`nimble install nyml`
+
+![Github Actions](https://github.com/openpeep/nyml/workflows/test/badge.svg)
+
+[API reference](https://nimdocs.com/openpeep/nyml)
+
 
 ## 😍 Key Features
 - [x] `integer`, `string`, `boolean`, `array`, `object`
@@ -11,12 +17,6 @@ _If you need a YAML 1.2 compatible library go with [flyx's NimYAML](https://gith
 - [x] Direct to object parser using [JSONY](https://github.com/treeform/jsony)
 - [x] Rules and Validator
 - [x] Open Source | `MIT` License
-
-## Installing
-
-```
-nimble install nyml
-```
 
 ## Example
 
