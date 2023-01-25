@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.1"
+version       = "0.1.2"
 author        = "George Lemon"
 description   = "A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode"
 license       = "MIT"
