@@ -8,7 +8,7 @@
 
 ![Github Actions](https://github.com/openpeep/nyml/workflows/test/badge.svg)
 
-[API reference](https://nimdocs.com/openpeep/nyml)
+[API reference](https://openpeep.github.io/nyml/)
 
 
 ## 😍 Key Features
