@@ -46,6 +46,9 @@ handlers:
       case lex.buf[lex.bufpos]:
       of ':', NewLines, EndOfFile:
         break
+      of '#':
+        dec lex.bufpos
+        break
       else:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
@@ -220,10 +223,12 @@ proc newNode(p: var Parser, ntype: NType, tk: TokenTuple): Node =
 template handleUnquotedStrings() =
   walk p
   while p.curr.kind != TK_EOF and p.curr.line == parent.line:
+    if p.curr.kind == TK_COMMENT:
+      identToStr.value = identToStr.value.strip()
+      break
     identToStr.value &= indent(p.curr.value, p.curr.wsno)
     walk p
   strNode.strv = identToStr.value
-  # strNode.meta = (identToStr.line, identToStr.col)
 
 proc parseUnquotedStrings(p: var Parser, this: TokenTuple): Node =
   let parent = this
@@ -267,6 +272,7 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
         node.items.add objectNode
         while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
           objectNode.value.add p.parse()
+
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   result = p.newNode Array
   walk p
