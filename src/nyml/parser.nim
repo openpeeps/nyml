@@ -265,8 +265,8 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
         let subNode = p.parse()
         objectNode.value.add(subNode)
         node.items.add objectNode
-        # while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
-          # objectNode.value.add p.parse()
+        while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
+          objectNode.value.add p.parse()
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   result = p.newNode Array
   walk p

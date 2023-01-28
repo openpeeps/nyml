@@ -1,8 +1,10 @@
-# A stupid simple YAML parser. From YAML to Nim objects, JsonNode or stringified JSON
+# A stupid simple YAML parser.
+# From YAML to Nim objects, JsonNode or stringified JSON
 # 
-# (c) 2023 Nyml | MIT License
+# (c) 2023 George Lemon | MIT License
 #          Made by Humans from OpenPeep
 #          https://github.com/openpeep/nyml
+
 import std/json
 from std/strutils import `%`, contains, count, split, strip,
             parseInt, parseBool, parseFloat, join

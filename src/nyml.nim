@@ -1,10 +1,11 @@
-# A stupid simple YAML parser. From YAML to Nim objects, JsonNode or stringified JSON
+# A stupid simple YAML parser.
+# From YAML to Nim objects, JsonNode or stringified JSON
 # 
-# (c) 2023 Nyml | MIT License
+# (c) 2023 George Lemon | MIT License
 #          Made by Humans from OpenPeep
 #          https://github.com/openpeep/nyml
 import pkginfo, std/json
-import nyml/[meta, parser]
+import nyml/[meta, parser, dump]
 
 export json, parser
 
@@ -59,6 +60,14 @@ proc toJsonStr*(n: Nyml, ruler:seq[string], prettyPrint = false, indent = 2): st
 proc `$`*(n: Nyml): string =
   result = n.toJsonStr(prettyPrint = n.isPretty)
 
+proc toYAML*(json: JsonNode): string =
+  ## Transform given JSON to YAML
+  result = dumpYAML(json)
+
+proc toYAML*(jsonString: string): string =
+  ## Transform given stringified JSON to YAML
+  result = dumpYAML(parseJson(jsonString))
+
 when requires "jsony":
   ## Add support for loose, direct to object parser
   ## https://github.com/treeform/jsony
@@ -72,3 +81,7 @@ when requires "jsony":
     else:
       var parsedContents = p.getContents()
       parsedContents.fromJson(toObject)
+
+when isMainModule:
+  echo yaml(readFile("test.yml"))
+  echo yaml(readFile("test.yml")).toJsonStr(true)
