@@ -82,6 +82,6 @@ when requires "jsony":
       var parsedContents = p.getContents()
       parsedContents.fromJson(toObject)
 
-when isMainModule:
-  echo yaml(readFile("test.yml"))
-  echo yaml(readFile("test.yml")).toJsonStr(true)
+# when isMainModule:
+#   echo yaml(readFile("test.yml"))
+#   echo yaml(readFile("test.yml")).toJsonStr(true)
