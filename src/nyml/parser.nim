@@ -4,11 +4,13 @@
 #          Made by Humans from OpenPeep
 #          https://github.com/openpeep/nyml
 
-import toktok
-import std/[ropes, tables, json, jsonutils]
+import pkg/toktok
+import std/ropes
 
 from std/strutils import parseInt, parseBool, `%`, indent
 from std/enumutils import symbolName
+
+import std/[jsonutils, json]
 
 static:
   Program.settings(
@@ -83,7 +85,6 @@ type
   Parser* = object
     lex*: Lexer
     prev, curr, next: TokenTuple
-    lvl: Table[int, Node]
     error: string
     contents: Rope
     program: Program 
@@ -144,7 +145,7 @@ template `$$`(value: string) = add p.contents, "\"" & value & "\":"
 template `$=`(value: string) = add p.contents, "\"" & value & "\""
 template `$=`(value: bool) = add p.contents, $value
 template `$=`(value: int) = add p.contents, $value
-proc `$`(program: Program): string = pretty toJson(program), 2
+# proc `$`(program: Program): string = pretty toJson(program), 2
 proc `$`(node: Node): string = pretty toJson(node), 2
 
 template `!`(nextBlock) =
@@ -238,6 +239,7 @@ proc parseUnquotedStrings(p: var Parser, this: TokenTuple): Node =
   result = strNode
 
 proc parse(p: var Parser): Node
+proc parseObject(p: var Parser, this: TokenTuple): Node
 
 proc parseString(p: var Parser): Node =
   result = p.newNode String
@@ -266,12 +268,15 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
         node.items.add p.parseUnquotedStrings(p.curr)
       else:
         # handle objects 
-        let objectNode = p.newNode Object
-        let subNode = p.parse()
+        let
+          objectNode = p.newNode Object
+          this = p.curr
+          subNode = p.parse()
         objectNode.value.add(subNode)
+        if p.curr.kind == TK_IDENTIFIER and p.curr.col == this.col:
+          while p.curr.kind == TK_IDENTIFIER and p.curr.col == this.col:
+            objectNode.value.add p.parse()
         node.items.add objectNode
-        while p.curr.kind == TK_IDENTIFIER and p.curr.col == subNode.meta.col:
-          objectNode.value.add p.parse()
 
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   result = p.newNode Array
