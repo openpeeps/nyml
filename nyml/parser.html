@@ -115,7 +115,6 @@ window.addEventListener('DOMContentLoaded', main);
     title="Parser = object
   lex*: Lexer
   prev, curr, next: TokenTuple
-  lvl: Table[int, Node]
   error: string
   contents: Rope
   program: Program
@@ -250,7 +249,6 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><pre><a href="parser.html#Parser"><span class="Identifier">Parser</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">lex</span><span class="Operator">*</span><span class="Other">:</span> <a href="parser.html#Lexer"><span class="Identifier">Lexer</span></a>
   <span class="Identifier">prev</span><span class="Other">,</span> <span class="Identifier">curr</span><span class="Other">,</span> <span class="Identifier">next</span><span class="Other">:</span> <a href="parser.html#TokenTuple"><span class="Identifier">TokenTuple</span></a>
-  <span class="Identifier">lvl</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">,</span> <span class="Identifier">Node</span><span class="Other">]</span>
   <span class="Identifier">error</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">contents</span><span class="Other">:</span> <span class="Identifier">Rope</span>
   <span class="Identifier">program</span><span class="Other">:</span> <span class="Identifier">Program</span>
@@ -431,7 +429,7 @@ Initialize a new BaseLexer instance with given Stream
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-01-25 21:27:06 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-02-09 17:39:00 UTC</small>
       </div>
     </div>
   </div>

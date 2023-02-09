@@ -4,3 +4,5 @@ toJson	index.html#toJson,Nyml	nyml: toJson(n: Nyml): Document
 toJsonStr	index.html#toJsonStr,Nyml,int	nyml: toJsonStr(n: Nyml; prettyPrint = false; indent = 2): string	
 toJsonStr	index.html#toJsonStr,Nyml,seq[string],int	nyml: toJsonStr(n: Nyml; ruler: seq[string]; prettyPrint = false; indent = 2): string	
 `$`	index.html#$,Nyml	nyml: `$`(n: Nyml): string	
+toYAML	index.html#toYAML,JsonNode	nyml: toYAML(json: JsonNode): string	
+toYAML	index.html#toYAML,string	nyml: toYAML(jsonString: string): string	
