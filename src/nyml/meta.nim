@@ -61,7 +61,7 @@ proc get(contents: JsonNode, key: string = ""): JsonNode =
       result = newJNull()
 
 proc get*(doc: Document, key: string = "", default: JsonNode = nil): JsonNode =
-  ## Access data in current Json document using dot annotation,
+  ## Access data in current JSON document using dot annotation,
   ## like for example: `user.profile.name`
   result = get(doc.contents, key)
   if result.kind == JNull:

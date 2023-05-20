@@ -4,27 +4,34 @@
 # (c) 2023 George Lemon | MIT License
 #          Made by Humans from OpenPeep
 #          https://github.com/openpeep/nyml
-import pkginfo, std/json
+import pkg/pkginfo
+import std/json except `%*`
 import nyml/[meta, parser, dump]
 
-export json, parser
+export parser
 
 when requires "jsony":
   # By default, Nyml has no built-in serialization.
-  # But, thanks to `pkginfo` we can enable the serialization feature
-  # using `jsony` package library (when current project requires it)
-  # https://github.com/treeform/jsony
+  # But, thanks to `pkginfo` we can enable this feature
+  # using `jsony` library (when current project requires it),
+  # So if you want to enable this feature,
+  # be sure you add `requires jsony` in your .nimble file
+  # See https://github.com/treeform/jsony.
   import jsony
   export jsony
 
 export meta
-export getInt, getStr, getBool
+export getInt, getStr, getBool, getFloat
 
 proc parse*(n: Nyml): Parser =
+  ## Parsea new YAML-like document
   result = parseYAML(n.getYamlContents)
 
-proc yaml*(contents: string, prettyPrint = false): Nyml =
-  ## Parse a new YAML document
+proc hasErrors*(n: Nyml): bool =
+  ## Determine if there are any errors to handle
+
+proc yaml*(contents: string, prettyPrint = false, data: openarray[(string, string)] = []): Nyml =
+  ## Parse a new YAML-like document
   result = Nyml.init(contents, prettyPrint)
 
 proc toJson*(n: Nyml): Document =
@@ -58,6 +65,7 @@ proc toJsonStr*(n: Nyml, ruler:seq[string], prettyPrint = false, indent = 2): st
   result = $doc.get()
 
 proc `$`*(n: Nyml): string =
+  ## Return a stringified JSON
   result = n.toJsonStr(prettyPrint = n.isPretty)
 
 proc toYAML*(json: JsonNode): string =
