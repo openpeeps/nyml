@@ -67,6 +67,16 @@ let osName: JsonNode = yaml(contents).toJson.get("jobs.test.runs-on")
 echo osName.getStr
 ```
 
+### Handle variables
+
+```nim
+let example = """
+name: ${{username}}
+"""
+let yml = yaml(example, data = %*{"username": "John Do The Do"})
+echo yml # {"name": "John Do The Do"}
+```
+
 ### Dump YAML to JSON string
 ```nim
 echo yaml(contents)
