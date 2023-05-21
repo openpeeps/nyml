@@ -170,6 +170,7 @@ type
       boolv: bool
     of Variable:
       varIdent: string
+      varRight: seq[Node]
     else: discard
     meta: tuple[line, col: int]
 
@@ -233,10 +234,13 @@ template `[`(subNode) =
   subNode
 template `]`() = p.contents &= "]"
 
-proc writeNodes(p: var Parser, node: seq[Node], withObjects = false) =
+proc writeNodes(p: var Parser, node: seq[Node]) =
   # Parse AST nodes and write JSON (strings)
-  let nodeLen = node.len - 1 
-  for i in 0 .. nodeLen:
+  var skipComma: bool
+  let nodeLen = node.len - 1
+  for i in 0..node.high:
+    if node[i] == nil: # dirty fix
+      continue
     case node[i].ntype:
     of Object:
       if node[i].key.len != 0:
@@ -263,16 +267,25 @@ proc writeNodes(p: var Parser, node: seq[Node], withObjects = false) =
     of Nil:
       p.contents &= "null"
     of Variable:
+      var skipIter: bool
       if p.yml.hasData:
         let jsonValue = p.yml.data.get(node[i].varIdent)
-        $= jsonValue.getStr
+        if node[i].varRight.len != 0:
+          var strConcat = jsonValue.getStr
+          for nodeConcat in node[i].varRight:
+            strConcat &= nodeConcat.strv
+          $= strConcat
+        else:
+          $= jsonValue.getStr
       else:
         p.contents &= "null"
+      if skipIter: continue
     else:
       discard
-    if i != nodeLen:
+    if i != node.high:
       if node[i].ntype notin {Comment, Header}:
-        p.contents &= ","
+        add p.contents, ","
+    # inc i
 
 proc newNode(p: var Parser, ntype: NType): Node =
   result = Node(
@@ -286,12 +299,13 @@ proc newNode(p: var Parser, ntype: NType, tk: TokenTuple): Node =
     meta: (tk.line, tk.col)
   )
 
-proc parseUnquotedStrings(p: var Parser, this: TokenTuple): Node =
-  let parent = this
+proc parseUnquotedStrings(p: var Parser, this: TokenTuple, stoppers: set[TokenKind] = {}): Node =
   let strNode = p.newNode String
   var identToStr = p.curr
   walk p
-  while p.curr.kind != TKEOF and p.curr.line == parent.line:
+  while p.curr.line == this.line:
+    if p.curr.kind in {TKEOF} + stoppers:
+      break
     if p.curr.kind == TKComment:
       identToStr.value = identToStr.value.strip()
       break
@@ -318,15 +332,21 @@ proc parseBool(p: var Parser, lit: bool): Node =
   result.boolv = lit
   walk p
 
-proc parseVariable(p: var Parser, this: TokenTuple): Node =
+proc parseVariable(p: var Parser, this: TokenTuple, inArray = false): Node =
   result = p.newNode Variable
   result.varIdent = p.curr.value
   walk p
+  if inArray:
+    if p.curr.line == this.line and p.curr.kind notin {TKComment, TKEOF, TKRBR, TKComma}:
+      result.varRight.add p.parseUnquotedStrings(this, {TKRBR, TKComma})
+  else:
+    if p.curr.line == this.line and p.curr.kind notin {TKComment, TKEOF}:
+      result.varRight.add p.parseUnquotedStrings(this)
 
 proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
   while p.curr.kind == TKHyphen and p.curr.col == node.meta.col:
     walk p
-    if p.curr.kind in literals:
+    if p.curr.kind in literals + {TKVariable}:
       node.items.add p.parse()
     elif p.curr.kind == TKIdentifier:
       if p.next.kind != TKColon:
@@ -353,11 +373,13 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
       break
     if p.curr.kind in literals:
       result.items.add p.parse()
+    elif p.curr.kind == TKVariable:
+      result.items.add p.parseVariable(this, true)
     else:
       discard # TODO
       # result.items.add p.parseUnquotedStrings(p.curr)
     if p.curr.kind != TKRBR:
-      if p.curr.kind == TKCOMMA and p.next.kind in literals:
+      if p.curr.kind == TKCOMMA and p.next.kind in literals + {TKVariable}:
         walk p
       else:
         p.setError("Invalid array item $1" % [p.curr.value])
@@ -382,7 +404,7 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
     elif p.curr.kind == TKVariable:
       result = p.newNode(Field, this)
       result.fieldKey = this.value
-      let varNode = p.parseVariable(p.curr)
+      let varNode = p.parseVariable(this)
       result.fieldValue.add varNode
     else:
       result = p.newNode(Field, this)
@@ -431,6 +453,8 @@ proc parse(p: var Parser): Node =
     result = p.parseBool false
   of TKLBR:
     result = p.parseInlineArray(this)
+  of TKVariable:
+    result = p.parseVariable(this)
   of TKComment: walk p
   of TKNull, TKNil:
     result = p.newNode Nil
@@ -449,7 +473,6 @@ proc parseYAML*(yml: Nyml, strContents: string): Parser =
     else:
       p.rootType = Object
     p.program.nodes.add p.parse()
-  # echo p.program
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
