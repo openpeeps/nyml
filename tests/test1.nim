@@ -74,3 +74,21 @@ info:
 
   check yml.toJson.get("info.short") == data["us"]["shortName"]
   check yml.toJson.get("info.long").getStr == data["us"]["longName"].getStr
+
+test "can handle variables in arrays":
+  let inlineArrayExample = """
+paths: [${{user}}, ${{root}}]
+  """
+  var yml = yaml(inlineArrayExample, data = %*{"user": "/", "root": "/root"})
+  check yml.toJson.get("paths")[0] == newJString "/"
+  check yml.toJson.get("paths")[1] == newJString "/root"
+
+  let arrayExample = """
+paths:
+  - ${{root}}
+  - ${{user}}
+  """
+
+  yml = yaml(inlineArrayExample, data = %*{"user": "/", "root": "/root"})
+  check yml.toJson.get("paths")[0] == newJString "/"
+  check yml.toJson.get("paths")[1] == newJString "/root"
