@@ -1,5 +1,6 @@
 parse	index.html#parse,Nyml	nyml: parse(n: Nyml): Parser	
-yaml	index.html#yaml,string	nyml: yaml(contents: string; prettyPrint = false): Nyml	
+hasErrors	index.html#hasErrors,Nyml	nyml: hasErrors(n: Nyml): bool	
+yaml	index.html#yaml,string,JsonNode	nyml: yaml(contents: string; prettyPrint = false; data: JsonNode = nil): Nyml	
 toJson	index.html#toJson,Nyml	nyml: toJson(n: Nyml): Document	
 toJsonStr	index.html#toJsonStr,Nyml,int	nyml: toJsonStr(n: Nyml; prettyPrint = false; indent = 2): string	
 toJsonStr	index.html#toJsonStr,Nyml,seq[string],int	nyml: toJsonStr(n: Nyml; ruler: seq[string]; prettyPrint = false; indent = 2): string	

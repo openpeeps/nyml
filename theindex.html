@@ -121,11 +121,19 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="parser: handleAltString(lex: var Lexer; kind: TokenKind)" href="nyml/parser.html#handleAltString%2CLexer%2CTokenKind">parser: handleAltString(lex: var Lexer; kind: TokenKind)</a></li>
           </ul></dd>
+<dt><a name="handleComment" href="#handleComment"><span>handleComment:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser: handleComment(lex: var Lexer; kind: TokenKind)" href="nyml/parser.html#handleComment%2CLexer%2CTokenKind">parser: handleComment(lex: var Lexer; kind: TokenKind)</a></li>
+          </ul></dd>
 <dt><a name="handleCustomIdent" href="#handleCustomIdent"><span>handleCustomIdent:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="parser: handleCustomIdent(lex: var Lexer): TokenKind" href="nyml/parser.html#handleCustomIdent%2CLexer">parser: handleCustomIdent(lex: var Lexer): TokenKind</a></li>
           <li><a class="reference external"
           data-doc-search-tag="parser: handleCustomIdent[T: Lexer](lex: var T; kind: TokenKind)" href="nyml/parser.html#handleCustomIdent%2CT%2CTokenKind">parser: handleCustomIdent[T: Lexer](lex: var T; kind: TokenKind)</a></li>
+          </ul></dd>
+<dt><a name="handleVariable" href="#handleVariable"><span>handleVariable:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser: handleVariable(lex: var Lexer; kind: TokenKind)" href="nyml/parser.html#handleVariable%2CLexer%2CTokenKind">parser: handleVariable(lex: var Lexer; kind: TokenKind)</a></li>
           </ul></dd>
 <dt><a name="hasError" href="#hasError"><span>hasError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -135,6 +143,8 @@ window.addEventListener('DOMContentLoaded', main);
           </ul></dd>
 <dt><a name="hasErrors" href="#hasErrors"><span>hasErrors:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="nyml: hasErrors(n: Nyml): bool" href="index.html#hasErrors%2CNyml">nyml: hasErrors(n: Nyml): bool</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="meta: hasErrors(doc: Document): bool" href="nyml/meta.html#hasErrors%2CDocument">meta: hasErrors(doc: Document): bool</a></li>
           </ul></dd>
 <dt><a name="hasLetters" href="#hasLetters"><span>hasLetters:</span></a></dt><dd><ul class="simple">
@@ -147,7 +157,9 @@ window.addEventListener('DOMContentLoaded', main);
           </ul></dd>
 <dt><a name="init" href="#init"><span>init:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false): N" href="nyml/meta.html#init%2Ctypedesc%5BN%5D%2Cstring">meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false): N</a></li>
+          data-doc-search-tag="meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false;
+              data: JsonNode): N" href="nyml/meta.html#init%2Ctypedesc%5BN%5D%2Cstring%2CJsonNode">meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false;
+              data: JsonNode): N</a></li>
           <li><a class="reference external"
           data-doc-search-tag="parser: init[T: typedesc[Lexer]](lex: T; fileContents: string;
                          allowMultilineStrings = false): Lexer" href="nyml/parser.html#init%2CT%2Cstring">parser: init[T: typedesc[Lexer]](lex: T; fileContents: string;
@@ -187,7 +199,7 @@ window.addEventListener('DOMContentLoaded', main);
           </ul></dd>
 <dt><a name="parseYAML" href="#parseYAML"><span>parseYAML:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="parser: parseYAML(strContents: string): Parser" href="nyml/parser.html#parseYAML%2Cstring">parser: parseYAML(strContents: string): Parser</a></li>
+          data-doc-search-tag="parser: parseYAML(yml: Nyml; strContents: string): Parser" href="nyml/parser.html#parseYAML%2CNyml%2Cstring">parser: parseYAML(yml: Nyml; strContents: string): Parser</a></li>
           </ul></dd>
 <dt><a name="rules" href="#rules"><span>rules:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -229,7 +241,7 @@ window.addEventListener('DOMContentLoaded', main);
           </ul></dd>
 <dt><a name="yaml" href="#yaml"><span>yaml:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nyml: yaml(contents: string; prettyPrint = false): Nyml" href="index.html#yaml%2Cstring">nyml: yaml(contents: string; prettyPrint = false): Nyml</a></li>
+          data-doc-search-tag="nyml: yaml(contents: string; prettyPrint = false; data: JsonNode = nil): Nyml" href="index.html#yaml%2Cstring%2CJsonNode">nyml: yaml(contents: string; prettyPrint = false; data: JsonNode = nil): Nyml</a></li>
           </ul></dd>
 <dt><a name="YAMLException" href="#YAMLException"><span>YAMLException:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -240,7 +252,7 @@ window.addEventListener('DOMContentLoaded', main);
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-02-09 17:39:00 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-21 08:19:54 UTC</small>
       </div>
     </div>
   </div>

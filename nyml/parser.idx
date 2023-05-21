@@ -13,9 +13,11 @@ skip	nyml/parser.html#skip,Lexer	parser: skip(lex: var Lexer)
 handleCustomIdent	nyml/parser.html#handleCustomIdent,T,TokenKind	parser: handleCustomIdent[T: Lexer](lex: var T; kind: TokenKind)	
 handleAltString	nyml/parser.html#handleAltString,Lexer,TokenKind	parser: handleAltString(lex: var Lexer; kind: TokenKind)	
 handleCustomIdent	nyml/parser.html#handleCustomIdent,Lexer	parser: handleCustomIdent(lex: var Lexer): TokenKind	
+handleComment	nyml/parser.html#handleComment,Lexer,TokenKind	parser: handleComment(lex: var Lexer; kind: TokenKind)	
+handleVariable	nyml/parser.html#handleVariable,Lexer,TokenKind	parser: handleVariable(lex: var Lexer; kind: TokenKind)	
 getToken	nyml/parser.html#getToken,Lexer	parser: getToken(lex: var Lexer): TokenTuple	
 Parser	nyml/parser.html#Parser	parser: Parser	
 hasError	nyml/parser.html#hasError,T	parser: hasError[T: Parser](p: var T): bool	
 getError	nyml/parser.html#getError,T	parser: getError[T: Parser](p: var T): string	
 getContents	nyml/parser.html#getContents,Parser	parser: getContents(p: var Parser): string	
-parseYAML	nyml/parser.html#parseYAML,string	parser: parseYAML(strContents: string): Parser	
+parseYAML	nyml/parser.html#parseYAML,Nyml,string	parser: parseYAML(yml: Nyml; strContents: string): Parser	

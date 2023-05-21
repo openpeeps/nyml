@@ -102,7 +102,7 @@ window.addEventListener('DOMContentLoaded', main);
   <a class="reference reference-toplevel" href="#7" id="57">Types</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#Document"
-    title="Document = object
+    title="Document = ref object
   contents*: JsonNode
   rules: seq[string]
   hasErrors: bool
@@ -111,7 +111,9 @@ window.addEventListener('DOMContentLoaded', main);
     title="Nyml = object
   yamlContents: string
   error: string
-  prettyPrint: bool">Nyml</a></li>
+  prettyPrint: bool
+  data*: Document
+  hasData*: bool">Nyml</a></li>
   <li><a class="reference" href="#YAMLException"
     title="YAMLException = object of CatchableError">YAMLException</a></li>
 
@@ -146,8 +148,10 @@ window.addEventListener('DOMContentLoaded', main);
 
   </ul>
   <ul class="simple nested-toc-section">init
-      <li><a class="reference" href="#init%2Ctypedesc%5BN%5D%2Cstring"
-    title="init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false): N">init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false): N</a></li>
+      <li><a class="reference" href="#init%2Ctypedesc%5BN%5D%2Cstring%2CJsonNode"
+    title="init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false;
+              data: JsonNode): N">init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false;
+              data: JsonNode): N</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">isPretty
@@ -183,7 +187,7 @@ window.addEventListener('DOMContentLoaded', main);
 <h1><a class="toc-backref" href="#7">Types</a></h1>
 <dl class="item">
 <div id="Document">
-<dt><pre><a href="meta.html#Document"><span class="Identifier">Document</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+<dt><pre><a href="meta.html#Document"><span class="Identifier">Document</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">contents</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">JsonNode</span>
   <span class="Identifier">rules</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span>
   <span class="Identifier">hasErrors</span><span class="Other">:</span> <span class="Identifier">bool</span>
@@ -200,6 +204,8 @@ window.addEventListener('DOMContentLoaded', main);
   <span class="Identifier">yamlContents</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">error</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">prettyPrint</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">data</span><span class="Operator">*</span><span class="Other">:</span> <a href="meta.html#Document"><span class="Identifier">Document</span></a>
+  <span class="Identifier">hasData</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
 </pre></dt>
 <dd>
 
@@ -233,7 +239,7 @@ window.addEventListener('DOMContentLoaded', main);
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
-Access data in current Json document using dot annotation, like for example: <tt class="docutils literal"><span class="pre"><span class="Identifier">user</span><span class="Operator">.</span><span class="Identifier">profile</span><span class="Operator">.</span><span class="Identifier">name</span></span></tt>
+Access data in current JSON document using dot annotation, like for example: <tt class="docutils literal"><span class="pre"><span class="Identifier">user</span><span class="Operator">.</span><span class="Identifier">profile</span><span class="Operator">.</span><span class="Identifier">name</span></span></tt>
 
 </dd>
 </div>
@@ -261,8 +267,9 @@ Retrieve YAMl contents fron Nyml object
 
 </dd>
 </div>
-<div id="init,typedesc[N],string">
-<dt><pre><span class="Keyword">proc</span> <a href="#init%2Ctypedesc%5BN%5D%2Cstring"><span class="Identifier">init</span></a><span class="Other">[</span><span class="Identifier">N</span><span class="Other">:</span> <a href="meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">]</span><span class="Other">(</span><span class="Identifier">newNyml</span><span class="Other">:</span> <span class="Identifier">typedesc</span><span class="Other">[</span><span class="Identifier">N</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">contents</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pretty</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">N</span></pre></dt>
+<div id="init,typedesc[N],string,JsonNode">
+<dt><pre><span class="Keyword">proc</span> <a href="#init%2Ctypedesc%5BN%5D%2Cstring%2CJsonNode"><span class="Identifier">init</span></a><span class="Other">[</span><span class="Identifier">N</span><span class="Other">:</span> <a href="meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">]</span><span class="Other">(</span><span class="Identifier">newNyml</span><span class="Other">:</span> <span class="Identifier">typedesc</span><span class="Other">[</span><span class="Identifier">N</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">contents</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pretty</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span>
+                   <span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">JsonNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">N</span></pre></dt>
 <dd>
 
 Initialize a new Nyml instance
@@ -305,7 +312,7 @@ Initialize a new Nyml instance
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-02-09 17:39:00 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-21 08:19:54 UTC</small>
       </div>
     </div>
   </div>

@@ -112,6 +112,11 @@ window.addEventListener('DOMContentLoaded', main);
     title="`$`(n: Nyml): string">`$`(n: Nyml): string</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">hasErrors
+      <li><a class="reference" href="#hasErrors%2CNyml"
+    title="hasErrors(n: Nyml): bool">hasErrors(n: Nyml): bool</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">parse
       <li><a class="reference" href="#parse%2CNyml"
     title="parse(n: Nyml): Parser">parse(n: Nyml): Parser</a></li>
@@ -137,8 +142,8 @@ window.addEventListener('DOMContentLoaded', main);
 
   </ul>
   <ul class="simple nested-toc-section">yaml
-      <li><a class="reference" href="#yaml%2Cstring"
-    title="yaml(contents: string; prettyPrint = false): Nyml">yaml(contents: string; prettyPrint = false): Nyml</a></li>
+      <li><a class="reference" href="#yaml%2Cstring%2CJsonNode"
+    title="yaml(contents: string; prettyPrint = false; data: JsonNode = nil): Nyml">yaml(contents: string; prettyPrint = false; data: JsonNode = nil): Nyml</a></li>
 
   </ul>
 
@@ -169,26 +174,35 @@ window.addEventListener('DOMContentLoaded', main);
 <dl class="item">
 <div id="$,Nyml">
 <dt><pre><span class="Keyword">proc</span> <a href="#%24%2CNyml"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span>
-                                     <span class="Identifier">YAMLException</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span>
+                                     <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span>
                             <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
+Return a stringified JSON
 
+</dd>
+</div>
+<div id="hasErrors,Nyml">
+<dt><pre><span class="Keyword">proc</span> <a href="#hasErrors%2CNyml"><span class="Identifier">hasErrors</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+Determine if there are any errors to handle
 
 </dd>
 </div>
 <div id="parse,Nyml">
-<dt><pre><span class="Keyword">proc</span> <a href="#parse%2CNyml"><span class="Identifier">parse</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nyml/parser.html#Parser"><span class="Identifier">Parser</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
+<dt><pre><span class="Keyword">proc</span> <a href="#parse%2CNyml"><span class="Identifier">parse</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nyml/parser.html#Parser"><span class="Identifier">Parser</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span>
+                                       <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span>
                               <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
-
+Parse a new YAML-like document
 
 </dd>
 </div>
 <div id="toJson,Nyml">
 <dt><pre><span class="Keyword">proc</span> <a href="#toJson%2CNyml"><span class="Identifier">toJson</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nyml/meta.html#Document"><span class="Identifier">Document</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
-    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span>
     <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
@@ -198,8 +212,8 @@ Parse YAML contents to JsonNode without content rules
 </div>
 <div id="toJsonStr,Nyml,int">
 <dt><pre><span class="Keyword">proc</span> <a href="#toJsonStr%2CNyml%2Cint"><span class="Identifier">toJsonStr</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">;</span> <span class="Identifier">prettyPrint</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span> <span class="Identifier">indent</span> <span class="Other">=</span> <span class="DecNumber">2</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
-    <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span>.}</pre></dt>
+    <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span>
+    <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 YAML parser to JSON string representation without rules checker
@@ -208,8 +222,8 @@ YAML parser to JSON string representation without rules checker
 </div>
 <div id="toJsonStr,Nyml,seq[string],int">
 <dt><pre><span class="Keyword">proc</span> <a href="#toJsonStr%2CNyml%2Cseq%5Bstring%5D%2Cint"><span class="Identifier">toJsonStr</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a><span class="Other">;</span> <span class="Identifier">ruler</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">prettyPrint</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span> <span class="Identifier">indent</span> <span class="Other">=</span> <span class="DecNumber">2</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
-    <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">,</span>
-    <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span>.}</pre></dt>
+    <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">YAMLException</span><span class="Other">,</span>
+    <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 YAML parser to JSON string representation, with rules checker
@@ -234,11 +248,12 @@ Transform given stringified JSON to YAML
 
 </dd>
 </div>
-<div id="yaml,string">
-<dt><pre><span class="Keyword">proc</span> <a href="#yaml%2Cstring"><span class="Identifier">yaml</span></a><span class="Other">(</span><span class="Identifier">contents</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">prettyPrint</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<div id="yaml,string,JsonNode">
+<dt><pre><span class="Keyword">proc</span> <a href="#yaml%2Cstring%2CJsonNode"><span class="Identifier">yaml</span></a><span class="Other">(</span><span class="Identifier">contents</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">prettyPrint</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span> <span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">JsonNode</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
-Parse a new YAML document
+Parse a new YAML-like document
 
 </dd>
 </div>
@@ -247,7 +262,7 @@ Parse a new YAML document
 <div class="section" id="19">
 <h1><a class="toc-backref" href="#19">Exports</a></h1>
 <dl class="item">
-<a href="nyml/parser.html#getError,T"><span class="Identifier">getError</span></a>, <a href="nyml/parser.html#parseYAML,string"><span class="Identifier">parseYAML</span></a>, <a href="nyml/parser.html#handleCustomIdent,Lexer"><span class="Identifier">handleCustomIdent</span></a>, <a href="nyml/parser.html#getError,Lexer"><span class="Identifier">getError</span></a>, <a href="nyml/parser.html#hasError,T"><span class="Identifier">hasError</span></a>, <a href="nyml/parser.html#hasLetters,Lexer,int"><span class="Identifier">hasLetters</span></a>, <a href="nyml/parser.html#hasNumbers,Lexer,int"><span class="Identifier">hasNumbers</span></a>, <a href="nyml/parser.html#setError,Lexer,string"><span class="Identifier">setError</span></a>, <a href="nyml/parser.html#getContents,Parser"><span class="Identifier">getContents</span></a>, <a href="nyml/parser.html#handleAltString,Lexer,TokenKind"><span class="Identifier">handleAltString</span></a>, <a href="nyml/parser.html#Lexer"><span class="Identifier">Lexer</span></a>, <a href="nyml/parser.html#TokenTuple"><span class="Identifier">TokenTuple</span></a>, <a href="nyml/parser.html#LexerException"><span class="Identifier">LexerException</span></a>, <a href="nyml/parser.html#getToken,Lexer"><span class="Identifier">getToken</span></a>, <a href="nyml/parser.html#generateIdentCase,Lexer"><span class="Identifier">generateIdentCase</span></a>, <a href="nyml/parser.html#Parser"><span class="Identifier">Parser</span></a>, <a href="nyml/parser.html#init,T,string"><span class="Identifier">init</span></a>, <a href="nyml/parser.html#TokenKind"><span class="Identifier">TokenKind</span></a>, <a href="nyml/parser.html#hasError,Lexer"><span class="Identifier">hasError</span></a>, <a href="nyml/parser.html#skip,Lexer"><span class="Identifier">skip</span></a>, <a href="nyml/parser.html#handleCustomIdent,T,TokenKind"><span class="Identifier">handleCustomIdent</span></a>, <a href="nyml/meta.html#exists,JsonNode"><span class="Identifier">exists</span></a>, <a href="nyml/meta.html#get,Document,string,JsonNode"><span class="Identifier">get</span></a>, <a href="nyml/meta.html#init,typedesc[N],string"><span class="Identifier">init</span></a>, <a href="nyml/meta.html#newDocument,JsonNode"><span class="Identifier">newDocument</span></a>, <a href="nyml/meta.html#rules,Document,openArray[tuple[string,JsonNodeKind]]"><span class="Identifier">rules</span></a>, <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a>, <a href="nyml/meta.html#Document"><span class="Identifier">Document</span></a>, <a href="nyml/meta.html#hasErrors,Document"><span class="Identifier">hasErrors</span></a>, <a href="nyml/meta.html#YAMLException"><span class="Identifier">YAMLException</span></a>, <a href="nyml/meta.html#getErrors,Document"><span class="Identifier">getErrors</span></a>, <a href="nyml/meta.html#getYamlContents,Nyml"><span class="Identifier">getYamlContents</span></a>, <a href="nyml/meta.html#isPretty,Nyml"><span class="Identifier">isPretty</span></a>
+<a href="nyml/parser.html#getError,T"><span class="Identifier">getError</span></a>, <a href="nyml/parser.html#hasNumbers,Lexer,int"><span class="Identifier">hasNumbers</span></a>, <a href="nyml/parser.html#setError,Lexer,string"><span class="Identifier">setError</span></a>, <a href="nyml/parser.html#handleCustomIdent,T,TokenKind"><span class="Identifier">handleCustomIdent</span></a>, <a href="nyml/parser.html#generateIdentCase,Lexer"><span class="Identifier">generateIdentCase</span></a>, <a href="nyml/parser.html#handleAltString,Lexer,TokenKind"><span class="Identifier">handleAltString</span></a>, <a href="nyml/parser.html#getToken,Lexer"><span class="Identifier">getToken</span></a>, <a href="nyml/parser.html#hasError,Lexer"><span class="Identifier">hasError</span></a>, <a href="nyml/parser.html#LexerException"><span class="Identifier">LexerException</span></a>, <a href="nyml/parser.html#handleCustomIdent,Lexer"><span class="Identifier">handleCustomIdent</span></a>, <a href="nyml/parser.html#getContents,Parser"><span class="Identifier">getContents</span></a>, <a href="nyml/parser.html#getError,Lexer"><span class="Identifier">getError</span></a>, <a href="nyml/parser.html#hasLetters,Lexer,int"><span class="Identifier">hasLetters</span></a>, <a href="nyml/parser.html#TokenTuple"><span class="Identifier">TokenTuple</span></a>, <a href="nyml/parser.html#parseYAML,Nyml,string"><span class="Identifier">parseYAML</span></a>, <a href="nyml/parser.html#Lexer"><span class="Identifier">Lexer</span></a>, <a href="nyml/parser.html#handleVariable,Lexer,TokenKind"><span class="Identifier">handleVariable</span></a>, <a href="nyml/parser.html#Parser"><span class="Identifier">Parser</span></a>, <a href="nyml/parser.html#init,T,string"><span class="Identifier">init</span></a>, <a href="nyml/parser.html#TokenKind"><span class="Identifier">TokenKind</span></a>, <a href="nyml/parser.html#hasError,T"><span class="Identifier">hasError</span></a>, <a href="nyml/parser.html#handleComment,Lexer,TokenKind"><span class="Identifier">handleComment</span></a>, <a href="nyml/parser.html#skip,Lexer"><span class="Identifier">skip</span></a>, <a href="nyml/meta.html#exists,JsonNode"><span class="Identifier">exists</span></a>, <a href="nyml/meta.html#get,Document,string,JsonNode"><span class="Identifier">get</span></a>, <a href="nyml/meta.html#init,typedesc[N],string,JsonNode"><span class="Identifier">init</span></a>, <a href="nyml/meta.html#newDocument,JsonNode"><span class="Identifier">newDocument</span></a>, <a href="nyml/meta.html#rules,Document,openArray[tuple[string,JsonNodeKind]]"><span class="Identifier">rules</span></a>, <a href="nyml/meta.html#Nyml"><span class="Identifier">Nyml</span></a>, <a href="nyml/meta.html#Document"><span class="Identifier">Document</span></a>, <a href="nyml/meta.html#hasErrors,Document"><span class="Identifier">hasErrors</span></a>, <a href="nyml/meta.html#YAMLException"><span class="Identifier">YAMLException</span></a>, <a href="nyml/meta.html#getErrors,Document"><span class="Identifier">getErrors</span></a>, <a href="nyml/meta.html#getYamlContents,Nyml"><span class="Identifier">getYamlContents</span></a>, <a href="nyml/meta.html#isPretty,Nyml"><span class="Identifier">isPretty</span></a>
 </dl></div>
 
   </div>
@@ -257,7 +272,7 @@ Parse a new YAML document
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-02-09 17:39:00 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-21 08:19:54 UTC</small>
       </div>
     </div>
   </div>

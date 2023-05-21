@@ -1,7 +1,7 @@
 YAMLException	nyml/meta.html#YAMLException	meta: YAMLException	
 Nyml	nyml/meta.html#Nyml	meta: Nyml	
 Document	nyml/meta.html#Document	meta: Document	
-init	nyml/meta.html#init,typedesc[N],string	meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false): N	
+init	nyml/meta.html#init,typedesc[N],string,JsonNode	meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false;\n              data: JsonNode): N	
 getYamlContents	nyml/meta.html#getYamlContents,Nyml	meta: getYamlContents(n: Nyml): string	
 isPretty	nyml/meta.html#isPretty,Nyml	meta: isPretty(n: Nyml): bool	
 get	nyml/meta.html#get,Document,string,JsonNode	meta: get(doc: Document; key: string = &quot;&quot;; default: JsonNode = nil): JsonNode	
