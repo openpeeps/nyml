@@ -17,8 +17,10 @@ type
     yamlContents: string
     error: string
     prettyPrint: bool
+    data*: Document
+    hasData*: bool
 
-  Document* = object
+  Document* = ref object
     contents*: JsonNode
     rules: seq[string]
     hasErrors: bool
@@ -26,9 +28,11 @@ type
 
   # RuleTuple = tuple[key: string, req: bool, expect: JsonNodeKind, default: JsonNode]
 
-proc init*[N: Nyml](newNyml: typedesc[N], contents: string, pretty = false): N =
+proc newDocument*(contents: JsonNode): Document
+
+proc init*[N: Nyml](newNyml: typedesc[N], contents: string, pretty = false, data: JsonNode): N =
   ## Initialize a new Nyml instance
-  result = newNyml(yamlContents: contents, prettyPrint: pretty)
+  result = newNyml(yamlContents: contents, prettyPrint: pretty, data: newDocument(data), hasData: data != nil)
 
 proc getYamlContents*(n: Nyml): string {.inline.} =
   ## Retrieve YAMl contents fron Nyml object

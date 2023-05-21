@@ -24,15 +24,15 @@ export meta
 export getInt, getStr, getBool, getFloat
 
 proc parse*(n: Nyml): Parser =
-  ## Parsea new YAML-like document
-  result = parseYAML(n.getYamlContents)
+  ## Parse a new YAML-like document
+  result = parseYAML(n, n.getYamlContents)
 
 proc hasErrors*(n: Nyml): bool =
   ## Determine if there are any errors to handle
 
-proc yaml*(contents: string, prettyPrint = false, data: openarray[(string, string)] = []): Nyml =
+proc yaml*(contents: string, prettyPrint = false, data: JsonNode = nil): Nyml =
   ## Parse a new YAML-like document
-  result = Nyml.init(contents, prettyPrint)
+  result = Nyml.init(contents, prettyPrint, data)
 
 proc toJson*(n: Nyml): Document =
   ## Parse YAML contents to JsonNode without content rules
@@ -91,5 +91,5 @@ when requires "jsony":
       parsedContents.fromJson(toObject)
 
 # when isMainModule:
-#   echo yaml(readFile("test.yml"))
+#   echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"})
 #   echo yaml(readFile("test.yml")).toJsonStr(true)

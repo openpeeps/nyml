@@ -44,3 +44,33 @@ postal:
   """
   let unquotedExampleJSON = """{"postal":{"description":"US : NNNNN[-NNNN]","redenundant_chars":"-","regex":"^0-95(0-94)?$","charset":"number","length":["5","10"]}}"""
   check $yaml(unquotedExample) == unquotedExampleJSON
+
+test "can handle variables":
+  let handleVarsExample = """
+info:
+  short: ${{us.shortName}}
+  long: ${{us.longName}}
+  alpha2: ${{us.alpha2}}
+  alpha3: ${{us.alpha3}}
+  iso: ${{us.iso}}
+  ioc: ${{us.ioc}}
+  capital: ${{us.capital}}
+  tld: ${{us.tld}}
+  """
+
+  let data = %*{
+    "us": {
+      "shortName": "United States",
+      "longName": "United States of America",
+      "alpha2": "US",
+      "alpha3": "USA",
+      "iso": "840",
+      "ioc": "USA",
+      "capital": "Washington",
+      "tld": ".us"
+    }
+  }
+  let yml = yaml(handleVarsExample, data = data)
+
+  check yml.toJson.get("info.short") == data["us"]["shortName"]
+  check yml.toJson.get("info.long").getStr == data["us"]["longName"].getStr

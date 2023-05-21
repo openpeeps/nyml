@@ -6,6 +6,7 @@
 
 import pkg/toktok
 import std/ropes
+import ./meta
 
 from std/strutils import parseInt, parseBool, `%`, indent
 from std/enumutils import symbolName
@@ -84,7 +85,7 @@ handlers:
       if lex.buf[lex.bufpos + 1] == '{' and lex.buf[lex.bufpos + 2] == '{':
         lex.startPos = lex.getColNumber(lex.bufpos)
         setLen(lex.token, 0)
-        inc lex.bufpos, 2 # ${{
+        inc lex.bufpos, 3 # ${{
         while true:
           case lex.buf[lex.bufpos]:
           of NewLines, EndOfFile:
@@ -145,9 +146,10 @@ type
     lex*: Lexer
     prev, curr, next: TokenTuple
     error: string
-    contents: Rope
+    contents: string
     program: Program 
     rootType: NType
+    yml: Nyml
 
   Node = ref object
     # nodeName: string
@@ -167,7 +169,7 @@ type
     of Bool:
       boolv: bool
     of Variable:
-      variable: string
+      varIdent: string
     else: discard
     meta: tuple[line, col: int]
 
@@ -260,6 +262,12 @@ proc writeNodes(p: var Parser, node: seq[Node], withObjects = false) =
       $= node[i].strv
     of Nil:
       p.contents &= "null"
+    of Variable:
+      if p.yml.hasData:
+        let jsonValue = p.yml.data.get(node[i].varIdent)
+        $= jsonValue.getStr
+      else:
+        p.contents &= "null"
     else:
       discard
     if i != nodeLen:
@@ -311,7 +319,9 @@ proc parseBool(p: var Parser, lit: bool): Node =
   walk p
 
 proc parseVariable(p: var Parser, this: TokenTuple): Node =
-  echo this
+  result = p.newNode Variable
+  result.varIdent = p.curr.value
+  walk p
 
 proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
   while p.curr.kind == TKHyphen and p.curr.col == node.meta.col:
@@ -370,13 +380,10 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
       result.fieldKey = this.value
       result.fieldValue.add p.parse()
     elif p.curr.kind == TKVariable:
-      walk p
-      if p.curr.kind == TKIdentifier:
-        result = p.newNode(Field, this)
-        result.fieldKey = this.value
-        let varNode = p.newNode(Variable, p.curr)
-        varNode.variable = p.curr.value
-        result.fieldValue.add varNode
+      result = p.newNode(Field, this)
+      result.fieldKey = this.value
+      let varNode = p.parseVariable(p.curr)
+      result.fieldValue.add varNode
     else:
       result = p.newNode(Field, this)
       result.fieldKey = this.value
@@ -430,8 +437,8 @@ proc parse(p: var Parser): Node =
     walk p
   else: discard
 
-proc parseYAML*(strContents: string): Parser =
-  var p = Parser(lex: Lexer.init(strContents, allowMultilineStrings = true))
+proc parseYAML*(yml: Nyml, strContents: string): Parser =
+  var p = Parser(lex: Lexer.init(strContents, allowMultilineStrings = true), yml: yml)
   p.curr = p.lex.getToken()
   p.next = p.lex.getToken()
   p.program = Program()
