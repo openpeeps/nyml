@@ -47,7 +47,7 @@ handlers:
     let identLineno = lex.lineNumber
     while identLineno == lex.lineNumber:
       case lex.buf[lex.bufpos]:
-      of ':', NewLines, EndOfFile:
+      of ':', ',', ']', NewLines, EndOfFile:
         break
       of '#':
         if lex.wsno == 0:
@@ -367,7 +367,7 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   result = p.newNode Array
   walk p
-  while p.curr.kind != TKRBR and (p.curr.line == this.line):
+  while p.curr.kind != TKRBR:
     if p.curr.kind == TKEOF:
       p.setError("EOF reached before closing array")
       break
@@ -376,15 +376,9 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     elif p.curr.kind == TKVariable:
       result.items.add p.parseVariable(this, true)
     else:
-      discard # TODO
-      # result.items.add p.parseUnquotedStrings(p.curr)
-    if p.curr.kind != TKRBR:
-      if p.curr.kind == TKCOMMA and p.next.kind in literals + {TKVariable}:
-        walk p
-      else:
-        p.setError("Invalid array item $1" % [p.curr.value])
-        break
-  walk p
+      result.items.add p.parseUnquotedStrings(p.curr, {TKRBR, TKComma})
+    if p.curr.kind == TKComma: walk p
+  walk p # ]
 
 proc parseObject(p: var Parser, this: TokenTuple): Node =
   walk p # :
