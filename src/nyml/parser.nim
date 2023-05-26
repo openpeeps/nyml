@@ -345,13 +345,13 @@ proc parseVariable(p: var Parser, this: TokenTuple, inArray = false): Node =
 
 proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
   while p.curr.kind == TKHyphen and p.curr.col == node.meta.col:
-    walk p
+    walk p # -
     if p.curr.kind in literals + {TKVariable}:
       node.items.add p.parse()
     elif p.curr.kind == TKIdentifier:
       if p.next.kind != TKColon:
         # handle unquoted strings.
-        node.items.add p.parseUnquotedStrings(p.curr)
+        node.items.add p.parseUnquotedStrings(this, {TKHyphen})
       else:
         # handle objects 
         let
@@ -376,7 +376,7 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     elif p.curr.kind == TKVariable:
       result.items.add p.parseVariable(this, true)
     else:
-      result.items.add p.parseUnquotedStrings(p.curr, {TKRBR, TKComma})
+      result.items.add p.parseUnquotedStrings(this, {TKRBR, TKComma})
     if p.curr.kind == TKComma: walk p
   walk p # ]
 
