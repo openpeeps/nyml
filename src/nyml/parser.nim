@@ -1,26 +1,24 @@
-# A stupid simple YAML parser. From YAML to Nim objects, JsonNode or stringified JSON
-# 
-# (c) 2023 Nyml | MIT License
+# A stupid simple YAML-like parser.
+#
+# Can parse YAML to JsonNode, stringified JSON or Nim objects via JSONY
+#
+# (c) 2023 yamlike | MIT License
 #          Made by Humans from OpenPeep
-#          https://github.com/openpeep/nyml
+#          https://github.com/openpeeps/yamlike
 
-import pkg/toktok
-import std/ropes
+import toktok
+import std/[json, jsonutils]
+import std/strutils except NewLines
 import ./meta
 
-from std/strutils import parseInt, parseBool, `%`, indent
-from std/enumutils import symbolName
-
-import std/[jsonutils, json]
-
-static:
-  Program.settings(
-    uppercase = true,
-    prefix = "TK_",
-    allowUnknown = true,
-    keepUnknownChars = true,
-    handleCustomIdent = true
-  )
+# static:
+#   Program.settings(
+#     uppercase = true,
+#     prefix = "tk_",
+#     allowUnknown = true,
+#     keepUnknownChars = true,
+#     handleCustomIdent = true
+#   )
 
 handlers:
   proc handleAltString*(lex: var Lexer, kind: TokenKind) =
@@ -57,7 +55,7 @@ handlers:
       else:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
-    result = TKIdentifier
+    result = tkIdentifier
 
   proc handleComment*(lex: var Lexer, kind: TokenKind) =
     if lex.wsno == 0 and lex.getColNumber(lex.bufpos) != 0:
@@ -65,7 +63,7 @@ handlers:
       setLen(lex.token, 0)
       inc lex.bufpos
       lex.token = "#"
-      lex.kind = TKUnknown
+      lex.kind = tkUnknown
       return
     lex.startPos = lex.getColNumber(lex.bufpos)
     setLen(lex.token, 0)
@@ -105,29 +103,31 @@ handlers:
             inc lex.bufpos
         lex.kind = kind
       else:
-        lex.kind = TKUnknown
+        lex.kind = tkUnknown
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
     except IndexDefect:
       discard lex.handleCustomIdent()
 
-tokens:
-  LBR   > '['
-  RBR   > ']'
-  Colon > ':'
-  Comma > ','
-  Hyphen > '-'
-  Header
-  Variable > tokenize(handleVariable, '$')
-  LC     > '{'
-  RC     > '}'
-  AltString > tokenize(handleAltString, '\'')
-  Backslash > '\\'
-  Comment > tokenize(handleComment, '#')
-  Nil   > {"NIL", "Nil", "nil"}
-  Null  > {"NULL", "Null", "null"}
-  True  > {"TRUE", "True", "true", "YES", "Yes", "yes"}
-  False > {"FALSE", "False", "false", "NO", "No", "no"}
+const settings = Settings(tkPrefix: "tk", tkModifier: defaultTokenModifier,
+                          enableKeepUnknown: true, enableCustomIdent: true)
+registerTokens settings:
+  lb   = '['
+  rb   = ']'
+  colon = ':'
+  comma = ','
+  hyphen = '-'
+  variable = tokenize(handleVariable, '$')
+  header
+  lc     = '{'
+  rc     = '}'
+  backSlash = '\\'
+  altString = tokenize(handleAltString, '\'')
+  comment = tokenize(handleComment, '#')
+  `nil` = ["NIL", "Nil", "nil"]
+  null  = ["NULL", "Null", "null"]
+  `true`  = ["TRUE", "True", "true", "YES", "Yes", "yes"]
+  `false` = ["FALSE", "False", "false", "NO", "No", "no"]
 
 type
   NType = enum
@@ -146,10 +146,10 @@ type
     lex*: Lexer
     prev, curr, next: TokenTuple
     error: string
-    contents: string
+    code: string
     program: Program 
     rootType: NType
-    yml: Nyml
+    yml: YAML
 
   Node = ref object
     # nodeName: string
@@ -172,14 +172,14 @@ type
       varIdent: string
       varRight: seq[Node]
     else: discard
-    meta: tuple[line, col: int]
+    meta: tuple[line, pos: int]
 
   Program = object
     nodes: seq[Node]
 
 const
-  assignables = {TKString, TKInteger, TKTrue, TKFalse, TKIdentifier}
-  literals = {TKString, TKAltString, TKInteger, TKTrue, TKFalse, TKNil, TKNull}
+  assignables = {tkString, tkInteger, tkTrue, tkFalse, tkIdentifier}
+  literals = {tkString, tkAltString, tkInteger, tkTrue, tkFalse, tkNil, tkNull}
 
 proc setError[T: Parser](p: var T, msg: string) =
   p.error = "Error ($2:$3): $1" % [msg, $p.curr.line, $p.curr.pos]
@@ -197,15 +197,15 @@ proc walk(p: var Parser, offset = 1) =
     p.prev = p.curr
     p.curr = p.next
     p.next = p.lex.getToken()
-    while p.next.kind == TKComment:
+    while p.next.kind == tkComment:
       p.next = p.lex.getToken()
 
-proc getContents*(p: var Parser): string = $p.contents
+proc getContents*(p: var Parser): string = p.code
 
-template `$$`(value: string) = add p.contents, "\"" & value & "\":"
-template `$=`(value: string) = add p.contents, "\"" & value & "\""
-template `$=`(value: bool) = add p.contents, $value
-template `$=`(value: int) = add p.contents, $value
+template `$$`(value: string) = add p.code, "\"" & value & "\":"
+template `$=`(value: string) = add p.code, "\"" & value & "\""
+template `$=`(value: bool) = add p.code, $value
+template `$=`(value: int) = add p.code, $value
 # proc `$`(program: Program): string = pretty toJson(program), 2
 proc `$`(node: Node): string = pretty toJson(node), 2
 
@@ -217,22 +217,22 @@ template `!`(nextBlock) =
   nextBlock
 
 template `!!`(nextBlock) =
-  if p.curr.col < this.col:
+  if p.curr.pos < this.pos:
     p.setError("Invalid indentation in array for \"$1\" item" % [p.next.value])
     break
   nextBlock
 
 template `{`(subNode) =
-  p.contents &= "{"
+  p.code &= "{"
   subNode
 
 template `}`() =
-  p.contents &= "}"
+  p.code &= "}"
 
 template `[`(subNode) =
-  p.contents &= "["
+  p.code &= "["
   subNode
-template `]`() = p.contents &= "]"
+template `]`() = p.code &= "]"
 
 proc writeNodes(p: var Parser, node: seq[Node]) =
   # Parse AST nodes and write JSON (strings)
@@ -265,7 +265,7 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
     of String:
       $= node[i].strv
     of Nil:
-      p.contents &= "null"
+      p.code &= "null"
     of Variable:
       var skipIter: bool
       if p.yml.hasData:
@@ -278,25 +278,25 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
         else:
           $= jsonValue.getStr
       else:
-        p.contents &= "null"
+        p.code &= "null"
       if skipIter: continue
     else:
       discard
     if i != node.high:
       if node[i].ntype notin {Comment, Header}:
-        add p.contents, ","
+        add p.code, ","
     # inc i
 
 proc newNode(p: var Parser, ntype: NType): Node =
   result = Node(
     ntype: ntype,
-    meta: (p.curr.line, p.curr.col)
+    meta: (p.curr.line, p.curr.pos)
   )
 
 proc newNode(p: var Parser, ntype: NType, tk: TokenTuple): Node =
   result = Node(
     ntype: ntype,
-    meta: (tk.line, tk.col)
+    meta: (tk.line, tk.pos)
   )
 
 proc parseUnquotedStrings(p: var Parser, this: TokenTuple, stoppers: set[TokenKind] = {}): Node =
@@ -304,9 +304,9 @@ proc parseUnquotedStrings(p: var Parser, this: TokenTuple, stoppers: set[TokenKi
   var identToStr = p.curr
   walk p
   while p.curr.line == this.line:
-    if p.curr.kind in {TKEOF} + stoppers:
+    if p.curr.kind in {tkEOF} + stoppers:
       break
-    if p.curr.kind == TKComment:
+    if p.curr.kind == tkComment:
       identToStr.value = identToStr.value.strip()
       break
     identToStr.value &= indent(p.curr.value, p.curr.wsno)
@@ -337,21 +337,21 @@ proc parseVariable(p: var Parser, this: TokenTuple, inArray = false): Node =
   result.varIdent = p.curr.value
   walk p
   if inArray:
-    if p.curr.line == this.line and p.curr.kind notin {TKComment, TKEOF, TKRBR, TKComma}:
-      result.varRight.add p.parseUnquotedStrings(this, {TKRBR, TKComma})
+    if p.curr.line == this.line and p.curr.kind notin {tkComment, tkEOF, tkRB, tkComma}:
+      result.varRight.add p.parseUnquotedStrings(this, {tkRB, tkComma})
   else:
-    if p.curr.line == this.line and p.curr.kind notin {TKComment, TKEOF}:
+    if p.curr.line == this.line and p.curr.kind notin {tkComment, tkEOF}:
       result.varRight.add p.parseUnquotedStrings(this)
 
 proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
-  while p.curr.kind == TKHyphen and p.curr.col == node.meta.col:
+  while p.curr.kind == tkHyphen and p.curr.pos == node.meta.pos:
     walk p # -
-    if p.curr.kind in literals + {TKVariable}:
+    if p.curr.kind in literals + {tkVariable}:
       node.items.add p.parse()
-    elif p.curr.kind == TKIdentifier:
-      if p.next.kind != TKColon:
+    elif p.curr.kind == tkIdentifier:
+      if p.next.kind != tkColon:
         # handle unquoted strings.
-        node.items.add p.parseUnquotedStrings(this, {TKHyphen})
+        node.items.add p.parseUnquotedStrings(this, {tkHyphen})
       else:
         # handle objects 
         let
@@ -359,25 +359,25 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
           this = p.curr
           subNode = p.parse()
         objectNode.value.add(subNode)
-        if p.curr.kind == TKIdentifier and p.curr.col == this.col:
-          while p.curr.kind == TKIdentifier and p.curr.col == this.col:
+        if p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
+          while p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
             objectNode.value.add p.parse()
         node.items.add objectNode
 
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   result = p.newNode Array
   walk p
-  while p.curr.kind != TKRBR:
-    if p.curr.kind == TKEOF:
+  while p.curr.kind != tkRB:
+    if p.curr.kind == tkEOF:
       p.setError("EOF reached before closing array")
-      break
+      return
     if p.curr.kind in literals:
       result.items.add p.parse()
-    elif p.curr.kind == TKVariable:
+    elif p.curr.kind == tkVariable:
       result.items.add p.parseVariable(this, true)
     else:
-      result.items.add p.parseUnquotedStrings(this, {TKRBR, TKComma})
-    if p.curr.kind == TKComma: walk p
+      result.items.add p.parseUnquotedStrings(this, {tkRB, tkComma})
+    if p.curr.kind == tkComma: walk p
   walk p # ]
 
 proc parseObject(p: var Parser, this: TokenTuple): Node =
@@ -387,15 +387,15 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
     result.fieldKey = this.value
     walk p
     result.fieldValue.add(p.parse())
-  elif p.next.kind != TKEOF and p.next.line == this.line:
+  elif p.next.kind != tkEOF and p.next.line == this.line:
     walk p # :
-    if p.curr.kind == TKColon:
+    if p.curr.kind == tkColon:
       p.setError("Unexpected token")
-    elif p.curr.kind == TKLBR:
+    elif p.curr.kind == tkLB:
       result = p.newNode(Field, this)
       result.fieldKey = this.value
       result.fieldValue.add p.parse()
-    elif p.curr.kind == TKVariable:
+    elif p.curr.kind == tkVariable:
       result = p.newNode(Field, this)
       result.fieldKey = this.value
       let varNode = p.parseVariable(this)
@@ -410,59 +410,59 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
     walk p
     if p.curr.kind in literals:
       ! result.value.add p.parse()
-    elif p.curr.kind in {TKIdentifier, TKHyphen} and p.curr.col > this.col:
-      while p.curr.col > this.col and p.curr.kind in {TKIdentifier, TKHyphen}:
-        if p.curr.kind == TKIdentifier and p.next.kind != TKColon:
+    elif p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos > this.pos:
+      while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkHyphen}:
+        if p.curr.kind == tkIdentifier and p.next.kind != tkColon:
           p.setError("Missing assignment token")
           break
         let sub = p.parse()
         result.value.add sub
-        if p.curr.col > sub.meta.col and p.curr.kind notin {TKEOF, TKHyphen, TKComment}:
+        if p.curr.pos > sub.meta.pos and p.curr.kind notin {tkEOF, tkHyphen, tkComment}:
           p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
           break
-    elif p.curr.kind == TKLBR:
+    elif p.curr.kind == tkLB:
       result.value.add(p.parse())
 
 proc parse(p: var Parser): Node =
   # Parse YAML to AST nodes
   let this = p.curr
   case p.curr.kind:
-  of TKIdentifier:
+  of tkIdentifier:
     result = p.parseObject(this)
-  of TKHyphen:
-    if unlikely(p.next.kind == TKHyphen):
-      while p.curr.kind == TKHyphen and p.curr.line == this.line:
+  of tkHyphen:
+    if unlikely(p.next.kind == tkHyphen):
+      while p.curr.kind == tkHyphen and p.curr.line == this.line:
         walk p
       return p.newNode(Header)
     var node: Node = p.newNode Array
     p.parseArray(node, this)
     result = node
-  of TKString, TKAltString:
+  of tkString, tkAltString:
     result = p.parseString()
-  of TKInteger:
+  of tkInteger:
     result = p.parseInt()
-  of TKTrue:
+  of tkTrue:
     result = p.parseBool true
-  of TKFalse:
+  of tkFalse:
     result = p.parseBool false
-  of TKLBR:
+  of tkLB:
     result = p.parseInlineArray(this)
-  of TKVariable:
+  of tkVariable:
     result = p.parseVariable(this)
-  of TKComment: walk p
-  of TKNull, TKNil:
+  of tkComment: walk p
+  of tkNull, tkNil:
     result = p.newNode Nil
     walk p
   else: discard
 
-proc parseYAML*(yml: Nyml, strContents: string): Parser =
+proc parseYAML*(yml: YAML, strContents: string): Parser =
   var p = Parser(lex: Lexer.init(strContents, allowMultilineStrings = true), yml: yml)
   p.curr = p.lex.getToken()
   p.next = p.lex.getToken()
   p.program = Program()
   while p.hasError == false and p.lex.hasError == false:
-    if p.curr.kind == TKEOF: break
-    if p.curr.kind == TKHyphen:
+    if p.curr.kind == tkEOF: break
+    if p.curr.kind == tkHyphen:
       p.rootType = Array
     else:
       p.rootType = Object
@@ -470,7 +470,7 @@ proc parseYAML*(yml: Nyml, strContents: string): Parser =
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
-    p.contents &= "{"
+    p.code &= "{"
     p.writeNodes(p.program.nodes)
-    p.contents &= "}"
+    p.code &= "}"
   result = p

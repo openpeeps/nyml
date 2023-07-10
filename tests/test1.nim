@@ -92,3 +92,7 @@ paths:
   yml = yaml(inlineArrayExample, data = %*{"user": "/", "root": "/root"})
   check yml.toJson.get("paths")[0] == newJString "/"
   check yml.toJson.get("paths")[1] == newJString "/root"
+
+# test "can parse JSON to YAML":
+
+# test "can reparse YAML to JSON"

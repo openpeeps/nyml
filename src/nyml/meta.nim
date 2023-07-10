@@ -1,20 +1,20 @@
-# A stupid simple YAML parser.
-# From YAML to Nim objects, JsonNode or stringified JSON
-# 
-# (c) 2023 George Lemon | MIT License
+# A stupid simple YAML-like parser.
+#
+# Can parse YAML to JsonNode, stringified JSON or Nim objects via JSONY
+#
+# (c) 2023 yamlike | MIT License
 #          Made by Humans from OpenPeep
-#          https://github.com/openpeep/nyml
+#          https://github.com/openpeeps/yamlike
 
 import std/json
-from std/strutils import `%`, contains, count, split, strip,
-            parseInt, parseBool, parseFloat, join
+from std/strutils import `%`, contains, split, join
 export json
 
 type
   YAMLException* = object of CatchableError
 
-  Nyml* = object
-    yamlContents: string
+  YAML* = object
+    str*: string
     error: string
     prettyPrint: bool
     data*: Document
@@ -30,15 +30,11 @@ type
 
 proc newDocument*(contents: JsonNode): Document
 
-proc init*[N: Nyml](newNyml: typedesc[N], contents: string, pretty = false, data: JsonNode): N =
+proc init*[N: YAML](newNyml: typedesc[N], str: string, pretty = false, data: JsonNode): N =
   ## Initialize a new Nyml instance
-  result = newNyml(yamlContents: contents, prettyPrint: pretty, data: newDocument(data), hasData: data != nil)
+  result = newNyml(str: str, prettyPrint: pretty, data: newDocument(data), hasData: data != nil)
 
-proc getYamlContents*(n: Nyml): string {.inline.} =
-  ## Retrieve YAMl contents fron Nyml object
-  result = n.yamlContents
-
-proc isPretty*(n: Nyml): bool =
+proc isPretty*(n: YAML): bool =
   result = n.prettyPrint
 
 proc get(contents: JsonNode, key: string = ""): JsonNode = 
