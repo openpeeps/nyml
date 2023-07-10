@@ -1,95 +1,75 @@
-# A stupid simple YAML parser.
-# From YAML to Nim objects, JsonNode or stringified JSON
-# 
-# (c) 2023 George Lemon | MIT License
+# A stupid simple YAML-like parser.
+#
+# Can parse YAML to JsonNode, stringified JSON or Nim objects via JSONY
+#
+# (c) 2023 yamlike | MIT License
 #          Made by Humans from OpenPeep
-#          https://github.com/openpeep/nyml
-import std/[json, ropes, strutils]
+#          https://github.com/openpeeps/yamlike
+
+import jsony
+import std/[json, strutils]
 
 type
-  JsonDocument* = ref object
-    i: int
-    yaml: Rope
-    jsonNode: JsonNode
+  JD* = object
+    yaml*: string
+    node: JsonNode
 
-proc str(j: JsonDocument, node: JsonNode) =
-  let s = node.str
-  if s.count(' ') > 1:
-    add j.yaml, indent("\"" & s & "\"", 1)
-  else:
-    if s.len != 0:
-      add j.yaml, indent(s, 1)
-    else:
-      add j.yaml, indent("\"\"", 1)
+# forward declaration
+proc parse(j: var JD, n: JsonNode, i: var int)
 
-proc integer(j: JsonDocument, node: JsonNode) = add j.yaml, indent($node.num, 1)
-proc floatNumber(j: JsonDocument, node: JsonNode) = add j.yaml, indent($node.fnum, 1)
-proc boolean(j: JsonDocument, node: JsonNode) = add j.yaml, indent($node.bval, 1)
-proc obj(j: JsonDocument, node: JsonNode, pKind: JsonNodeKind) # defer
-proc arr(j: JsonDocument, node: JsonNode, nl = true) # defer
+proc inc(j: var JD, i: var int) =
+  if i > 0: inc i, 2 else: i = 2
 
-proc handleValue(j: JsonDocument, n: JsonNode, pKind: JsonNodeKind) =
-  case n.kind:
-  of JString: j.str n
-  of JInt:    j.integer n
-  of JFloat:    j.floatNumber n
-  of JBool:   j.boolean n
-  of JObject:
-    inc j.i
-    j.obj n, pKind
-    dec j.i
-  of JArray: j.arr n, false
-  else: discard
+proc dec(j: var JD, i: var int) =
+  if i > 1: dec i, 2 else: i = 0
 
-proc obj(j: JsonDocument, node: JsonNode, pKind: JsonNodeKind) =
+proc ynull(j: var JD, n: JsonNode) = j.yaml.add indent("null", 1) & "\n"
+proc ybool(j: var JD, n: JsonNode) = j.yaml.add indent($n.bval, 1) & "\n"
+proc yfloat(j: var JD, n: JsonNode) = j.yaml.add indent($n.fnum, 1) & "\n"
+proc yint(j: var JD, n: JsonNode) = j.yaml.add indent($n.num, 1) & "\n"
+proc ystr(j: var JD, n: JsonNode) =
+  if n.str.len > 0: add j.yaml, indent("\"" & n.str & "\"", 1) & "\n"
+  else:             add j.yaml, indent("\"\"", 1) & "\n"
+
+proc tab(j: var JD, s: string, i: int) =
+  if i >= 2: j.yaml.add(spaces(i))
+  j.yaml.add(s)
+
+proc yobj(j: var JD, n: JsonNode, i: var int) =
+  for k, v in pairs(n):
+    j.tab(k & ":", i)
+    case v.kind
+    of JObject, JArray:
+      j.inc i
+      j.yaml.add("\n")
+    else: discard
+    j.parse(v, i)
+  j.dec i
+
+proc yarr(j: var JD, n: JsonNode, i: var int) =
+  for v in n:
+    j.tab("-", i)
+    case v.kind:
+    of JObject:
+      j.inc i
+      j.yaml.add("\n")
+    else: discard
+    j.parse(v, i)
+  j.dec i
+
+proc parse(j: var JD, n: JsonNode, i: var int) =
+  case n.kind
+  of JBool:   j.ybool(n)
+  of JFloat:  j.yfloat(n)
+  of JInt:    j.yint(n)
+  of JString: j.ystr(n)
+  of JNull:   j.ynull(n)
+  of JObject: j.yobj(n, i)
+  of JArray:  j.yarr(n, i)
+
+proc dump*(n: JsonNode): string =
+  var j = JD(node: n)
   var i = 0
-  for k, v in node.pairs:
-    if i == 0 and pKind == JArray:
-      add j.yaml, indent(k, j.i) & ":"
-    else:
-      add j.yaml, indent(k, j.i * 2) & ":"
-    if v.kind == JObject:
-      inc j.i
-      if v.len != 0:
-        add j.yaml, "\n"
-        add j.yaml, spaces(j.i)
-        j.obj(v, pKind)
-      else: add j.yaml, indent("{}", 1)
-      dec j.i
-    elif v.kind == JArray:
-      inc j.i
-      j.handleValue(v, pKind)
-      dec j.i
-    else:
-      j.handleValue(v, pKind)
-    inc i
-    if i != node.len:
-      add j.yaml, "\n"
-
-proc arr(j: JsonDocument, node: JsonNode, nl = true) =
-  if nl:
-    add j.yaml, "\n"
-  if node.len == 0:
-    add j.yaml, indent("[]", 1)
-  else:
-    add j.yaml, "\n"
-  var i = 0
-  for n in node.items:
-    add j.yaml, spaces(j.i * 2)
-    add j.yaml, "-"
-    j.handleValue(n, JArray)
-    inc i
-    if i != node.len:
-      add j.yaml, "\n"
-
-proc dumpYAML*(json: JsonNode): string =
-  let j = JsonDocument(jsonNode: json)
-  case json.kind:
-  of JInt:      j.integer json
-  of JFloat:    j.floatNumber json 
-  of JString:   j.str json
-  of JBool:     j.boolean json
-  of JArray:    j.arr json, false
-  of JObject:   j.obj json, JObject
-  else: discard
+  j.parse(j.node, i)
+  j.node = nil
   result = $j.yaml
