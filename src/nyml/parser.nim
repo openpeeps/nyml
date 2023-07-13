@@ -410,11 +410,14 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
     walk p
     if p.curr.kind in literals:
       ! result.value.add p.parse()
-    elif p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos > this.pos:
-      while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkHyphen}:
+    elif p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos >= this.pos:
+      if p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
+        p.setError("Invalid indentation")
+        return
+      while p.curr.pos >= this.pos and p.curr.kind in {tkIdentifier, tkHyphen}:
         if p.curr.kind == tkIdentifier and p.next.kind != tkColon:
           p.setError("Missing assignment token")
-          break
+          return
         let sub = p.parse()
         result.value.add sub
         if p.curr.pos > sub.meta.pos and p.curr.kind notin {tkEOF, tkHyphen, tkComment}:
