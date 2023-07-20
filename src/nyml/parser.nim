@@ -11,15 +11,6 @@ import std/[json, jsonutils]
 import std/strutils except NewLines
 import ./meta
 
-# static:
-#   Program.settings(
-#     uppercase = true,
-#     prefix = "tk_",
-#     allowUnknown = true,
-#     keepUnknownChars = true,
-#     handleCustomIdent = true
-#   )
-
 handlers:
   proc handleAltString*(lex: var Lexer, kind: TokenKind) =
     lex.startPos = lex.getColNumber(lex.bufpos)
@@ -109,8 +100,9 @@ handlers:
     except IndexDefect:
       discard lex.handleCustomIdent()
 
-const settings = Settings(tkPrefix: "tk", tkModifier: defaultTokenModifier,
-                          enableKeepUnknown: true, enableCustomIdent: true)
+const settings =
+  Settings(tkPrefix: "tk", tkModifier: defaultTokenModifier,
+          keepUnknown: true, enableCustomIdent: true)
 registerTokens settings:
   lb   = '['
   rb   = ']'
