@@ -101,8 +101,15 @@ handlers:
       discard lex.handleCustomIdent()
 
 const settings =
-  Settings(tkPrefix: "tk", tkModifier: defaultTokenModifier,
-          keepUnknown: true, enableCustomIdent: true)
+  Settings(
+    tkPrefix: "tk",
+    tkModifier: defaultTokenModifier,
+    lexerName: "Lexer",
+    lexerTuple: "TokenTuple",
+    lexerTokenKind: "TokenKind",
+    keepUnknown: true,
+    enableCustomIdent: true
+  )
 registerTokens settings:
   lb   = '['
   rb   = ']'
@@ -451,7 +458,7 @@ proc parse(p: var Parser): Node =
   else: discard
 
 proc parseYAML*(yml: YAML, strContents: string): Parser =
-  var p = Parser(lex: Lexer.init(strContents, allowMultilineStrings = true), yml: yml)
+  var p = Parser(lex: newLexer(strContents, allowMultilineStrings = true), yml: yml)
   p.curr = p.lex.getToken()
   p.next = p.lex.getToken()
   p.program = Program()
