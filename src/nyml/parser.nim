@@ -32,7 +32,7 @@ handlers:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
 
-  proc handleCustomIdent*(lex: var Lexer): TokenKind =
+  proc handleCustomIdent(lex: var Lexer): TokenKind {.discardable.} =
     let identLineno = lex.lineNumber
     while identLineno == lex.lineNumber:
       case lex.buf[lex.bufpos]:
@@ -98,7 +98,7 @@ handlers:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
     except IndexDefect:
-      discard lex.handleCustomIdent()
+      lex.handleCustomIdent()
 
 const settings =
   Settings(
@@ -108,7 +108,7 @@ const settings =
     lexerTuple: "TokenTuple",
     lexerTokenKind: "TokenKind",
     keepUnknown: true,
-    enableCustomIdent: true
+    useDefaultIdent: false
   )
 registerTokens settings:
   lb   = '['
