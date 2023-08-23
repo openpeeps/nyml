@@ -77,7 +77,7 @@ let yml = yaml(example, data = %*{"username": "John Do The Do"})
 echo yml # {"name": "John Do The Do"}
 ```
 
-### Dump YAML to JSON string
+### Dump YAML to stringified JSON
 ```nim
 echo yaml(contents)
 
@@ -86,13 +86,12 @@ echo yaml(contents, true)
 
 ```
 
-## Roadmap
-- [ ] Add tests
-- [ ] Add more examples
-
-### ❤ Contributions
-You can help with code, bugfixing, or any ideas. 
+### ❤ Contributions & Support
+- 🐛 Found a bug? [Create a new Issue](https://github.com/openpeeps/nyml/issues)
+- 👋 Wanna help? [Fork it!](https://github.com/openpeeps/nyml/fork)
+- 😎 [Get €20 in cloud credits from Hetzner](https://hetzner.cloud/?ref=Hm0mYGM9NxZ4)
+- 🥰 [Donate to OpenPeeps via PayPal address](https://www.paypal.com/donate/?hosted_button_id=RJK3ZTDWPL55C)
 
 ### 🎩 License
-Nyml is an Open Source Software released under `MIT` license. [Made by Humans from OpenPeep](https://github.com/openpeep).<br>
-Copyright &copy; 2023 OpenPeep & Contributors &mdash; All rights reserved.
+`MIT` license. [Made by Humans from OpenPeeps](https://github.com/openpeeps).<br>
+Copyright &copy; 2023 OpenPeeps & Contributors &mdash; All rights reserved.
