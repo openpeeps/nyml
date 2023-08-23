@@ -8,7 +8,7 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.4.0"
-requires "toktok"
+requires "toktok#head"
 requires "jsony"
 
 task tests, "Run test":
