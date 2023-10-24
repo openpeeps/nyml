@@ -59,17 +59,15 @@ proc toYAML*(json: string): string = dump(parseJson(json))
 
 ## Add support for loose, direct to object parser
 ## https://github.com/treeform/jsony
-template ymlParser*(strContents: string, toObject: typedesc[object]): untyped =
-  var yml = YAML.init(strContents)
+template fromYaml*(str: string, obj: typedesc[object]): untyped =
+  var yml = YAML.init(str, false, nil)
   var p: Parser = yml.parse()
   if p.hasError():
     raise newException(YAMLException, p.getError)
   elif p.lex.hasError():
     raise newException(YAMLException, p.lex.getError)
-  var str = p.getContents()
-  str.fromJson(toObject)
-
-# macro yaml*()
+  var jsonContent = p.getContents()
+  jsony.fromJson(jsonContent, obj)
 
 when isMainModule:
   # echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"})
