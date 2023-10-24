@@ -1,23 +1,27 @@
-TokenKind	nyml/parser.html#TokenKind	parser: TokenKind	
-TokenTuple	nyml/parser.html#TokenTuple	parser: TokenTuple	
-Lexer	nyml/parser.html#Lexer	parser: Lexer	
-LexerException	nyml/parser.html#LexerException	parser: LexerException	
-init	nyml/parser.html#init,T,string	parser: init[T: typedesc[Lexer]](lex: T; fileContents: string;\n                         allowMultilineStrings = false): Lexer	
-generateIdentCase	nyml/parser.html#generateIdentCase,Lexer	parser: generateIdentCase(lex: var Lexer)	
-setError	nyml/parser.html#setError,Lexer,string	parser: setError(lex: var Lexer; message: string)	
-hasError	nyml/parser.html#hasError,Lexer	parser: hasError(lex: Lexer): bool	
-getError	nyml/parser.html#getError,Lexer	parser: getError(lex: Lexer): string	
-hasLetters	nyml/parser.html#hasLetters,Lexer,int	parser: hasLetters(lex: var Lexer; pos: int): bool	
-hasNumbers	nyml/parser.html#hasNumbers,Lexer,int	parser: hasNumbers(lex: var Lexer; pos: int): bool	
-skip	nyml/parser.html#skip,Lexer	parser: skip(lex: var Lexer)	
-handleCustomIdent	nyml/parser.html#handleCustomIdent,T,TokenKind	parser: handleCustomIdent[T: Lexer](lex: var T; kind: TokenKind)	
-handleAltString	nyml/parser.html#handleAltString,Lexer,TokenKind	parser: handleAltString(lex: var Lexer; kind: TokenKind)	
-handleCustomIdent	nyml/parser.html#handleCustomIdent,Lexer	parser: handleCustomIdent(lex: var Lexer): TokenKind	
-handleComment	nyml/parser.html#handleComment,Lexer,TokenKind	parser: handleComment(lex: var Lexer; kind: TokenKind)	
-handleVariable	nyml/parser.html#handleVariable,Lexer,TokenKind	parser: handleVariable(lex: var Lexer; kind: TokenKind)	
-getToken	nyml/parser.html#getToken,Lexer	parser: getToken(lex: var Lexer): TokenTuple	
-Parser	nyml/parser.html#Parser	parser: Parser	
-hasError	nyml/parser.html#hasError,T	parser: hasError[T: Parser](p: var T): bool	
-getError	nyml/parser.html#getError,T	parser: getError[T: Parser](p: var T): string	
-getContents	nyml/parser.html#getContents,Parser	parser: getContents(p: var Parser): string	
-parseYAML	nyml/parser.html#parseYAML,Nyml,string	parser: parseYAML(yml: Nyml; strContents: string): Parser	
+nimTitle	parser	nyml/parser.html	module src/nyml/parser		0
+nim	TokenKind	nyml/parser.html#TokenKind	enum TokenKind		119
+nim	TokenTuple	nyml/parser.html#TokenTuple	tuple TokenTuple		119
+nim	Lexer	nyml/parser.html#Lexer	object Lexer		119
+nim	LexerException	nyml/parser.html#LexerException	object LexerException		119
+nim	newLexer	nyml/parser.html#newLexer,string,bool	proc newLexer(fileContent`gensym0: string; allowMultilineStrings`gensym0 = false): Lexer		562
+nim	lexReady	nyml/parser.html#lexReady,Lexer	proc lexReady(lex`gensym0: var Lexer)		573
+nim	inc	nyml/parser.html#inc,Lexer,int	proc inc(lex`gensym0: var Lexer; offset`gensym0 = 1)		577
+nim	current	nyml/parser.html#current,Lexer	proc current(lex`gensym0: var Lexer): char		578
+nim	add	nyml/parser.html#add,Lexer	proc add(lex`gensym0: var Lexer)		580
+nim	setError	nyml/parser.html#setError,Lexer,string	proc setError(lex`gensym0: var Lexer; message`gensym0: string)		584
+nim	hasError	nyml/parser.html#hasError,Lexer	proc hasError(lex`gensym0: Lexer): bool		589
+nim	getError	nyml/parser.html#getError,Lexer	proc getError(lex`gensym0: Lexer): string		590
+nim	hasLetters	nyml/parser.html#hasLetters,Lexer,int	proc hasLetters(lex`gensym0: var Lexer; pos`gensym0: int): bool		605
+nim	hasNumbers	nyml/parser.html#hasNumbers,Lexer,int	proc hasNumbers(lex`gensym0: var Lexer; pos`gensym0: int): bool		608
+nim	skip	nyml/parser.html#skip,Lexer	proc skip(lex`gensym0: var Lexer)		611
+nim	handleAltString	nyml/parser.html#handleAltString,Lexer,TokenKind	proc handleAltString(lex: var Lexer; kind: TokenKind)		15
+nim	handleComment	nyml/parser.html#handleComment,Lexer,TokenKind	proc handleComment(lex: var Lexer; kind: TokenKind)		51
+nim	handleVariable	nyml/parser.html#handleVariable,Lexer,TokenKind	proc handleVariable(lex: var Lexer; kind: TokenKind)		72
+nim	getToken	nyml/parser.html#getToken,Lexer	proc getToken(lex: var Lexer): TokenTuple		113
+nim	Parser	nyml/parser.html#Parser	object Parser		144
+nim	hasError	nyml/parser.html#hasError,T	proc hasError[T: Parser](p: var T): bool		186
+nim	getError	nyml/parser.html#getError,T	proc getError[T: Parser](p: var T): string		189
+nim	getContents	nyml/parser.html#getContents,Parser	proc getContents(p: var Parser): string		202
+nim	parseYAML	nyml/parser.html#parseYAML,YAML,string	proc parseYAML(yml: YAML; strContents: string): Parser		460
+nimgrp	haserror	nyml/parser.html#hasError-procs-all	proc		589
+nimgrp	geterror	nyml/parser.html#getError-procs-all	proc		590

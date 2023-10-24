@@ -1,12 +1,12 @@
-YAMLException	nyml/meta.html#YAMLException	meta: YAMLException	
-Nyml	nyml/meta.html#Nyml	meta: Nyml	
-Document	nyml/meta.html#Document	meta: Document	
-init	nyml/meta.html#init,typedesc[N],string,JsonNode	meta: init[N: Nyml](newNyml: typedesc[N]; contents: string; pretty = false;\n              data: JsonNode): N	
-getYamlContents	nyml/meta.html#getYamlContents,Nyml	meta: getYamlContents(n: Nyml): string	
-isPretty	nyml/meta.html#isPretty,Nyml	meta: isPretty(n: Nyml): bool	
-get	nyml/meta.html#get,Document,string,JsonNode	meta: get(doc: Document; key: string = &quot;&quot;; default: JsonNode = nil): JsonNode	
-exists	nyml/meta.html#exists,JsonNode	meta: exists(field: JsonNode): bool	
-rules	nyml/meta.html#rules,Document,openArray[tuple[string,JsonNodeKind]]	meta: rules(doc: var Document;\n      docRules: openArray[tuple[key: string, kind: JsonNodeKind]])	
-hasErrors	nyml/meta.html#hasErrors,Document	meta: hasErrors(doc: Document): bool	
-getErrors	nyml/meta.html#getErrors,Document	meta: getErrors(doc: Document): string	
-newDocument	nyml/meta.html#newDocument,JsonNode	meta: newDocument(contents: JsonNode): Document	
+nimTitle	meta	nyml/meta.html	module src/nyml/meta		0
+nim	YAMLException	nyml/meta.html#YAMLException	object YAMLException		14
+nim	YAML	nyml/meta.html#YAML	object YAML		16
+nim	Document	nyml/meta.html#Document	type Document		23
+nim	newDocument	nyml/meta.html#newDocument,JsonNode	proc newDocument(contents: JsonNode): Document		31
+nim	init	nyml/meta.html#init,typedesc[N],string,JsonNode	proc init[N: YAML](newNyml: typedesc[N]; str: string; pretty = false; data: JsonNode): N		33
+nim	isPretty	nyml/meta.html#isPretty,YAML	proc isPretty(n: YAML): bool		37
+nim	get	nyml/meta.html#get,Document,string,JsonNode	proc get(doc: Document; key: string = ""; default: JsonNode = nil): JsonNode		63
+nim	exists	nyml/meta.html#exists,JsonNode	proc exists(field: JsonNode): bool		70
+nim	rules	nyml/meta.html#rules,Document,openArray[tuple[string,JsonNodeKind]]	proc rules(doc: var Document;\n      docRules: openArray[tuple[key: string, kind: JsonNodeKind]])		73
+nim	hasErrors	nyml/meta.html#hasErrors,Document	proc hasErrors(doc: Document): bool		81
+nim	getErrors	nyml/meta.html#getErrors,Document	proc getErrors(doc: Document): string		84
