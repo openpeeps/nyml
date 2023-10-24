@@ -69,6 +69,6 @@ template fromYaml*(str: string, obj: typedesc[object]): untyped =
   var jsonContent = p.getContents()
   jsony.fromJson(jsonContent, obj)
 
-when isMainModule:
-  # echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"})
-  echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"}).toJsonStr()
+# when isMainModule:
+#   # echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"})
+#   echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"}).toJsonStr()
