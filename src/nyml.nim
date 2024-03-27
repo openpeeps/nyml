@@ -56,9 +56,9 @@ proc `$`*(n: YAML): string =
 proc toYAML*(json: JsonNode): string = dump(json)
 proc toYAML*(json: string): string = dump(parseJson(json))
 
-## Add support for loose, direct to object parser
-## https://github.com/treeform/jsony
 template fromYaml*(str: string, obj: typedesc[object]): untyped =
+  ## Add support for loose, direct to object parser using
+  ## https://github.com/treeform/jsony
   var yml = YAML.init(str, false, nil)
   var p: Parser = yml.parse()
   if p.hasError():
