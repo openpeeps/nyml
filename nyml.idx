@@ -1,12 +1,12 @@
 nimTitle	nyml	index.html	module src/nyml		0
-nim	parse	index.html#parse,YAML	proc parse(n: YAML): Parser		17
-nim	yaml	index.html#yaml,string,JsonNode	proc yaml(contents: string; prettyPrint = false; data: JsonNode = nil): YAML		21
-nim	toJson	index.html#toJson,YAML	proc toJson(n: YAML): Document		25
-nim	toJsonStr	index.html#toJsonStr,YAML,int	proc toJsonStr(n: YAML; prettyPrint = false; indent = 2): string		34
-nim	toJsonStr	index.html#toJsonStr,YAML,seq[string],int	proc toJsonStr(n: YAML; ruler: seq[string]; prettyPrint = false; indent = 2): string		46
-nim	`$`	index.html#$,YAML	proc `$`(n: YAML): string		53
-nim	toYAML	index.html#toYAML,JsonNode	proc toYAML(json: JsonNode): string		57
-nim	toYAML	index.html#toYAML,string	proc toYAML(json: string): string		58
-nim	fromYaml	index.html#fromYaml.t,string,typedesc[]	template fromYaml(str: string; obj: typedesc[object]): untyped		62
-nimgrp	toyaml	index.html#toYAML-procs-all	proc		57
-nimgrp	tojsonstr	index.html#toJsonStr-procs-all	proc		34
+nim	parse	index.html#parse,YAML	proc parse(n: YAML): Parser		16
+nim	yaml	index.html#yaml,string,JsonNode	proc yaml(contents: string; prettyPrint = false; data: JsonNode = nil): YAML		20
+nim	toJson	index.html#toJson,YAML	proc toJson(n: YAML): Document		24
+nim	toJsonStr	index.html#toJsonStr,YAML,int	proc toJsonStr(n: YAML; prettyPrint = false; indent = 2): string		33
+nim	toJsonStr	index.html#toJsonStr,YAML,seq[string],int	proc toJsonStr(n: YAML; ruler: seq[string]; prettyPrint = false; indent = 2): string		45
+nim	`$`	index.html#$,YAML	proc `$`(n: YAML): string		52
+nim	toYAML	index.html#toYAML,JsonNode	proc toYAML(json: JsonNode): string		56
+nim	toYAML	index.html#toYAML,string	proc toYAML(json: string): string		57
+nim	fromYaml	index.html#fromYaml.t,string,typedesc[]	template fromYaml(str: string; obj: typedesc[object]): untyped		59
+nimgrp	toyaml	index.html#toYAML-procs-all	proc		56
+nimgrp	tojsonstr	index.html#toJsonStr-procs-all	proc		33

@@ -1,3 +1,3 @@
 nimTitle	dump	nyml/dump.html	module src/nyml/dump		0
-nim	JD	nyml/dump.html#JD	object JD		13
-nim	dump	nyml/dump.html#dump,JsonNode	proc dump(n: JsonNode): string		70
+nim	JD	nyml/dump.html#JD	object JD		12
+nim	dump	nyml/dump.html#dump,JsonNode	proc dump(n: JsonNode): string		69
