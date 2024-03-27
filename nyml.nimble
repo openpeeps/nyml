@@ -2,7 +2,7 @@
 
 version       = "0.1.6"
 author        = "George Lemon"
-description   = "A stupid simple YAML Parser. From YAML to stringified JSON (fastest) or JsonNode"
+description   = "A stupid simple YAML Parser. YAML to stringified JSON, JsonNode or Nim objects via pkg/jsony"
 license       = "MIT"
 srcDir        = "src"        
 # Dependencies
@@ -16,7 +16,7 @@ task tests, "Run test":
 
 task dev, "compile nyml":
   echo "\n✨ Compiling..." & "\n"
-  exec "nim --gc:arc --out:bin/nyml --hints:off --threads:on c src/nyml.nim"
+  exec "nim --mm:arc --out:bin/nyml --hints:off --threads:on c src/nyml.nim"
 
 task bench, "benchmark":
-  exec "nim c --gc:arc -d:danger -d:release benchmarks/test.nim"
+  exec "nim c --mm:arc -d:danger -d:release benchmarks/test.nim"

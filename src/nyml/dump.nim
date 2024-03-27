@@ -1,10 +1,9 @@
-# A stupid simple YAML-like parser.
+# A stupid simple YAML-like parser. From YAML to JsonNode,
+# stringified JSON or Nim objects via pkg/jsony.
 #
-# Can parse YAML to JsonNode, stringified JSON or Nim objects via JSONY
-#
-# (c) 2023 yamlike | MIT License
-#          Made by Humans from OpenPeep
-#          https://github.com/openpeeps/yamlike
+# (c) 2023 nyml | MIT License
+#          Made by Humans from OpenPeeps
+#          https://github.com/openpeeps/nyml
 
 import jsony
 import std/[json, strutils]

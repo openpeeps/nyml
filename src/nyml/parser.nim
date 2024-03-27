@@ -1,10 +1,9 @@
-# A stupid simple YAML-like parser.
+# A stupid simple YAML-like parser. From YAML to JsonNode,
+# stringified JSON or Nim objects via pkg/jsony.
 #
-# Can parse YAML to JsonNode, stringified JSON or Nim objects via JSONY
-#
-# (c) 2023 yamlike | MIT License
-#          Made by Humans from OpenPeep
-#          https://github.com/openpeeps/yamlike
+# (c) 2023 nyml | MIT License
+#          Made by Humans from OpenPeeps
+#          https://github.com/openpeeps/nyml
 
 import toktok
 import std/[json, jsonutils]
@@ -413,7 +412,7 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
       if p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
         p.setError("Invalid indentation")
         return
-      while p.curr.pos >= this.pos and p.curr.kind in {tkIdentifier, tkHyphen}:
+      while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkHyphen}:
         if p.curr.kind == tkIdentifier and p.next.kind != tkColon:
           p.setError("Missing assignment token")
           return
@@ -472,6 +471,7 @@ proc parseYAML*(yml: YAML, strContents: string): Parser =
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
+    echo p.program.nodes
     p.code &= "{"
     p.writeNodes(p.program.nodes)
     p.code &= "}"
