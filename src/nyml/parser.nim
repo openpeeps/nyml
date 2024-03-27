@@ -471,7 +471,6 @@ proc parseYAML*(yml: YAML, strContents: string): Parser =
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
-    echo p.program.nodes
     p.code &= "{"
     p.writeNodes(p.program.nodes)
     p.code &= "}"
