@@ -1,14 +1,15 @@
 <p align="center">
-    😋 A stupid simple YAML Parser.<br>From <code>YAML</code> to stringified <code>JSON</code> or <code>JsonNode</code>. Written in Nim language 👑
+  😋 A stupid simple YAML Parser.<br>From <code>YAML</code> to stringified <code>JSON</code>, <code>JsonNode</code> or <code>Nim</code> objects via <code>pkg/jsony</code><br>
 </p>
 
-## Nim YAML
+<p align="center">
+  <code>nimble install nyml</code>
+</p>
 
-`nimble install nyml`
-
-![Github Actions](https://github.com/openpeep/nyml/workflows/test/badge.svg)
-
-[API reference](https://openpeep.github.io/nyml/)
+<p align="center">
+  <a href="https://openpeeps.github.io/nyml/">API reference</a><br><br>
+  <img src="https://github.com/openpeeps/nyml/workflows/test/badge.svg" alt="Github Actions"> <img src="https://github.com/openpeeps/nyml/workflows/docs/badge.svg" alt="Github Actions">
+</p>
 
 
 ## 😍 Key Features
