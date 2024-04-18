@@ -1,0 +1,9 @@
+info:
+  short: "United States"
+  long: "United States of America"
+  alpha2: US
+  alpha3: USA
+  iso: 840
+  ioc: USA
+  capital: "Washington"
+  tld: ".us"
