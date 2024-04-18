@@ -42,7 +42,7 @@ postal:
     - "5"
     - "10"
   """
-  let unquotedExampleJSON = """{"postal":{"description":"US : NNNNN[-NNNN]","redenundant_chars":"-","regex":"^0-95(0-94)?$","charset":"number","length":["5","10"]}}"""
+  let unquotedExampleJSON = """{"postal":{"description":"US : NNNNN[-NNNN]","redenundant_chars":"-","regex":"^[0-9]{5}([0-9]{4})?$","charset":"number","length":["5","10"]}}"""  
   check $yaml(unquotedExample) == unquotedExampleJSON
 
 test "can handle variables":
