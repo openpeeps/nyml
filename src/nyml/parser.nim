@@ -32,20 +32,27 @@ handlers:
         inc lex.bufpos
 
   proc handleCustomIdent(lex: var Lexer): TokenKind {.discardable.} =
-    let identLineno = lex.lineNumber
-    while identLineno == lex.lineNumber:
+    let lineno = lex.lineNumber
+    var isStopper: bool
+    while lineno == lex.lineNumber:
       case lex.buf[lex.bufpos]:
-      of ':', ',', ']', NewLines, EndOfFile:
+      of NewLines, EndOfFile, ':':
         break
-      of '#':
-        if lex.wsno == 0:
-          add lex.token, lex.buf[lex.bufpos]
-          inc lex.bufpos          
-        else: break
       else:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
-    result = tkIdentifier
+    lex.kind = tkIdentifier
+    result = lex.kind
+
+  proc handleUnknown*(lex: var Lexer) =
+    lex.startPos = lex.getColNumber(lex.bufpos)
+    case lex.buf[lex.bufpos]:
+    of '$', '/', '^', '(', ')':
+      lex.handleCustomIdent()
+    else:
+      add lex.token, lex.buf[lex.bufpos]
+      inc lex.bufpos
+      lex.kind = tkUnknown
 
   proc handleComment*(lex: var Lexer, kind: TokenKind) =
     if lex.wsno == 0 and lex.getColNumber(lex.bufpos) != 0:
@@ -93,9 +100,10 @@ handlers:
             inc lex.bufpos
         lex.kind = kind
       else:
-        lex.kind = tkUnknown
-        add lex.token, lex.buf[lex.bufpos]
-        inc lex.bufpos
+        # lex.kind = tkUnknown
+        # add lex.token, lex.buf[lex.bufpos]
+        # inc lex.bufpos
+        lex.handleCustomIdent()
     except IndexDefect:
       lex.handleCustomIdent()
 
@@ -107,6 +115,7 @@ const settings =
     lexerTuple: "TokenTuple",
     lexerTokenKind: "TokenKind",
     keepUnknown: true,
+    handleUnknown: true,
     useDefaultIdent: false
   )
 registerTokens settings:
@@ -467,7 +476,9 @@ proc parseYAML*(yml: YAML, strContents: string): Parser =
       p.rootType = Array
     else:
       p.rootType = Object
-    p.program.nodes.add p.parse()
+    let node = p.parse()
+    if likely(node != nil):
+      p.program.nodes.add node
   if p.rootType == Array:
     p.writeNodes(p.program.nodes)
   else:
