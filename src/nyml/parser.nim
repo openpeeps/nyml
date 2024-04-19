@@ -8,6 +8,7 @@
 import toktok
 import std/[json, jsonutils]
 import std/strutils except NewLines
+from std/xmltree import escape
 import ./meta
 
 handlers:
@@ -51,7 +52,7 @@ handlers:
   proc handleUnknown*(lex: var Lexer) =
     lex.startPos = lex.getColNumber(lex.bufpos)
     case lex.buf[lex.bufpos]:
-    of '$', '/', '^', '(', ')':
+    of '$', '/', '^', '(', ')', '<': # todo something to handle all chars except stoppers
       lex.handleCustomIdent()
     else:
       add lex.token, lex.buf[lex.bufpos]
@@ -276,7 +277,7 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
     of Int:
       $= node[i].intv
     of String:
-      $= node[i].strv
+      $= xmltree.escape(node[i].strv)
     of Nil:
       p.code &= "null"
     of Variable:
