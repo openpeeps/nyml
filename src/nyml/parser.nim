@@ -36,13 +36,17 @@ handlers:
     var isStopper: bool
     while lineno == lex.lineNumber:
       case lex.buf[lex.bufpos]:
-      of NewLines, EndOfFile, ':':
+      of NewLines, EndOfFile:
+        lex.kind = tkString
+        result = lex.kind
+        break
+      of ':':
+        lex.kind = tkIdentifier
+        result = lex.kind
         break
       else:
         add lex.token, lex.buf[lex.bufpos]
         inc lex.bufpos
-    lex.kind = tkIdentifier
-    result = lex.kind
 
   proc handleUnknown*(lex: var Lexer) =
     lex.startPos = lex.getColNumber(lex.bufpos)
@@ -116,8 +120,10 @@ const settings =
     lexerTokenKind: "TokenKind",
     keepUnknown: true,
     handleUnknown: true,
+    keepChar: true,
     useDefaultIdent: false
   )
+
 registerTokens settings:
   lb   = '['
   rb   = ']'
@@ -292,7 +298,6 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
     if i != node.high:
       if node[i].ntype notin {Comment, Header}:
         add p.code, ","
-    # inc i
 
 proc newNode(p: var Parser, ntype: NType): Node =
   result = Node(
@@ -300,17 +305,19 @@ proc newNode(p: var Parser, ntype: NType): Node =
     meta: (p.curr.line, p.curr.pos)
   )
 
-proc newNode(p: var Parser, ntype: NType, tk: TokenTuple): Node =
+proc newNode(p: var Parser, ntype: NType,
+    tk: TokenTuple): Node =
   result = Node(
     ntype: ntype,
     meta: (tk.line, tk.pos)
   )
 
-proc parseUnquotedStrings(p: var Parser, this: TokenTuple, stoppers: set[TokenKind] = {}): Node =
+proc parseUnquotedStrings(p: var Parser,
+    this: TokenTuple, stoppers: set[TokenKind] = {}): Node =
   let strNode = p.newNode String
   var identToStr = p.curr
   walk p
-  while p.curr.line == this.line:
+  while p.curr.line == this.line or p.curr.pos > this.pos:
     if p.curr.kind in {tkEOF} + stoppers:
       break
     if p.curr.kind == tkComment:
@@ -388,17 +395,24 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
   walk p # ]
 
 proc parseObject(p: var Parser, this: TokenTuple): Node =
-  walk p # :
-  if p.next.kind in literals:
+  walk p # tkIdentifier
+  let colon = p.curr; walk p
+  if p.curr.kind in literals and p.curr.line == this.line:
     result = p.newNode(Field, this)
     result.fieldKey = this.value
-    walk p
     result.fieldValue.add(p.parse())
-  elif p.next.kind != tkEOF and p.next.line == this.line:
-    walk p # :
-    if p.curr.kind == tkColon:
-      p.setError("Unexpected token")
-    elif p.curr.kind == tkLB:
+  elif p.curr.kind in literals and (p.curr.line > this.line and p.curr.pos > this.pos):    
+    result = p.newNode(Field, this)
+    result.fieldKey = this.value
+    var x = p.newNode String
+    var str: seq[string]
+    while p.curr.pos > this.pos and p.curr.kind != tkEOF:
+      add str, p.curr.value
+      walk p
+    x.strv = str.join(" ")
+    result.fieldValue.add(x)
+  elif p.curr.kind != tkEOF and p.curr.line == this.line:
+    if p.curr.kind == tkLB:
       result = p.newNode(Field, this)
       result.fieldKey = this.value
       result.fieldValue.add p.parse()
@@ -414,17 +428,18 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
   else:
     result = p.newNode(Object, this)
     result.key = this.value
-    walk p
-    if p.curr.kind in literals:
+    if p.curr.kind in literals and p.curr.line == this.line:
       ! result.value.add p.parse()
-    elif p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos >= this.pos:
+    elif p.curr.kind in {tkIdentifier, tkInteger, tkHyphen} and p.curr.pos >= this.pos:
       if p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
         p.setError("Invalid indentation")
         return
-      while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkHyphen}:
-        if p.curr.kind == tkIdentifier and p.next.kind != tkColon:
+      while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkInteger, tkHyphen}:
+        if p.curr.kind in {tkIdentifier, tkInteger} and p.next.kind != tkColon:
           p.setError("Missing assignment token")
           return
+        if p.curr.kind == tkInteger:
+          p.curr.kind = tkIdentifier
         let sub = p.parse()
         result.value.add sub
         if p.curr.pos > sub.meta.pos and p.curr.kind notin {tkEOF, tkHyphen, tkComment}:
