@@ -56,7 +56,7 @@ proc `$`*(n: YAML): string =
 proc toYAML*(json: JsonNode): string = dump(json)
 proc toYAML*(json: string): string = dump(parseJson(json))
 
-template fromYaml*(str: string, obj: typedesc[object]): untyped =
+template fromYaml*[T: typedesc](str: string, obj: T): untyped =
   ## Add support for loose, direct to object parser using
   ## https://github.com/treeform/jsony
   var yml = YAML.init(str, false, nil)
@@ -69,5 +69,5 @@ template fromYaml*(str: string, obj: typedesc[object]): untyped =
   jsony.fromJson(jsonContent, obj)
 
 # when isMainModule:
-  # echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"})
+  # echo yaml(readFile("typesense.yaml")).toJsonStr
   # echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"}).toJsonStr()
