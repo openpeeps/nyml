@@ -12,10 +12,10 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="nimdoc.out.css?v=2.0.2">
+<link rel="stylesheet" type="text/css" href="nimdoc.out.css?v=2.0.4">
 
 <!-- JS -->
-<script type="text/javascript" src="dochack.js?v=2.0.2"></script>
+<script type="text/javascript" src="dochack.js?v=2.0.4"></script>
 </head>
 <body>
   <div class="document" id="documentId">
@@ -48,7 +48,7 @@
           </ul></dd>
 <dt><a name="fromYaml" href="#fromYaml"><span>fromYaml:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nyml: template fromYaml(str: string; obj: typedesc[object]): untyped" href="index.html#fromYaml.t%2Cstring%2Ctypedesc%5B%5D">nyml: template fromYaml(str: string; obj: typedesc[object]): untyped</a></li>
+          data-doc-search-tag="nyml: template fromYaml[T: typedesc](str: string; obj: T): untyped" href="index.html#fromYaml.t%2Cstring%2CT">nyml: template fromYaml[T: typedesc](str: string; obj: T): untyped</a></li>
           </ul></dd>
 <dt><a name="get" href="#get"><span>get:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -79,6 +79,10 @@
 <dt><a name="handleComment" href="#handleComment"><span>handleComment:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="parser: proc handleComment(lex: var Lexer; kind: TokenKind)" href="nyml/parser.html#handleComment%2CLexer%2CTokenKind">parser: proc handleComment(lex: var Lexer; kind: TokenKind)</a></li>
+          </ul></dd>
+<dt><a name="handleUnknown" href="#handleUnknown"><span>handleUnknown:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser: proc handleUnknown(lex: var Lexer)" href="nyml/parser.html#handleUnknown%2CLexer">parser: proc handleUnknown(lex: var Lexer)</a></li>
           </ul></dd>
 <dt><a name="handleVariable" href="#handleVariable"><span>handleVariable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -204,7 +208,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2024-03-27 14:29:00 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2024-04-24 16:07:15 UTC</small>
       </div>
     </div>
   </div>
