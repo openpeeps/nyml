@@ -329,8 +329,8 @@ proc parseUnquotedStrings(p: var Parser,
   strNode.strv = identToStr.value.strip()
   result = strNode
 
-proc parse(p: var Parser): Node
-proc parseObject(p: var Parser, this: TokenTuple): Node
+proc parse(p: var Parser, inArray = false): Node
+proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node
 
 proc parseString(p: var Parser): Node =
   result = p.newNode String
@@ -372,11 +372,10 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
         let
           objectNode = p.newNode Object
           this = p.curr
-          subNode = p.parse()
+          subNode = p.parse(inArray = true)
+        while p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos >= this.pos:
+          subNode.value.add p.parse(inArray = true)
         objectNode.value.add(subNode)
-        if p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
-          while p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
-            objectNode.value.add p.parse()
         node.items.add objectNode
 
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
@@ -395,7 +394,7 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     if p.curr.kind == tkComma: walk p
   walk p # ]
 
-proc parseObject(p: var Parser, this: TokenTuple): Node =
+proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node =
   walk p # tkIdentifier
   let colon = p.curr; walk p
   if p.curr.kind in literals and p.curr.line == this.line:
@@ -432,7 +431,7 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
     if p.curr.kind in literals and p.curr.line == this.line:
       ! result.value.add p.parse()
     elif p.curr.kind in {tkIdentifier, tkInteger, tkHyphen} and p.curr.pos >= this.pos:
-      if p.curr.kind == tkIdentifier and p.curr.pos == this.pos:
+      if p.curr.kind == tkIdentifier and p.curr.pos == this.pos and inArray == false:
         p.setError("Invalid indentation")
         return
       while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkInteger, tkHyphen}:
@@ -449,12 +448,12 @@ proc parseObject(p: var Parser, this: TokenTuple): Node =
     elif p.curr.kind == tkLB:
       result.value.add(p.parse())
 
-proc parse(p: var Parser): Node =
+proc parse(p: var Parser, inArray = false): Node =
   # Parse YAML to AST nodes
   let this = p.curr
   case p.curr.kind:
   of tkIdentifier:
-    result = p.parseObject(this)
+    result = p.parseObject(this, inArray)
   of tkHyphen:
     if unlikely(p.next.kind == tkHyphen):
       while p.curr.kind == tkHyphen and p.curr.line == this.line:
