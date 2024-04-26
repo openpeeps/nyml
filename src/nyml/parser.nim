@@ -167,7 +167,7 @@ type
 
   Node = ref object
     # nodeName: string
-    case ntype: NType
+    case nt: NType
     of Array:
       items: seq[Node]
     of Object:
@@ -255,11 +255,11 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
   for i in 0..node.high:
     if node[i] == nil: # dirty fix
       continue
-    case node[i].ntype:
+    case node[i].nt:
     of Object:
       if node[i].key.len != 0:
         $$ node[i].key
-      if node[i].value[0].ntype == Array:
+      if node[i].value[0].nt == Array:
         p.writeNodes(node[i].value)
       else:
         `{`:
@@ -297,19 +297,19 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
     else:
       discard
     if i != node.high:
-      if node[i].ntype notin {Comment, Header}:
+      if node[i].nt notin {Comment, Header}:
         add p.code, ","
 
-proc newNode(p: var Parser, ntype: NType): Node =
+proc newNode(p: var Parser, nt: NType): Node =
   result = Node(
-    ntype: ntype,
+    nt: nt,
     meta: (p.curr.line, p.curr.pos)
   )
 
-proc newNode(p: var Parser, ntype: NType,
+proc newNode(p: var Parser, nt: NType,
     tk: TokenTuple): Node =
   result = Node(
-    ntype: ntype,
+    nt: nt,
     meta: (tk.line, tk.pos)
   )
 
@@ -373,8 +373,15 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
           objectNode = p.newNode Object
           this = p.curr
           subNode = p.parse(inArray = true)
+        if subNode.nt == Field:
+          objectNode.value.add(subNode)  
         while p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos >= this.pos:
-          subNode.value.add p.parse(inArray = true)
+          let childNode = p.parse(inArray = true)
+          if subNode.nt == Field:
+            add objectNode.value, childNode
+          elif subNode.nt == Object:
+            add subNode.value, childNode
+
         objectNode.value.add(subNode)
         node.items.add objectNode
 
