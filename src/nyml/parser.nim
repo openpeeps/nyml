@@ -8,7 +8,6 @@
 import toktok
 import std/[json, jsonutils]
 import std/strutils except NewLines
-from std/xmltree import escape
 import ./meta
 
 handlers:
@@ -136,6 +135,15 @@ registerTokens settings:
   lc     = '{'
   rc     = '}'
   backSlash = '\\'
+
+  gtChompClip = '>':     # keep the line feed, remove the trailing blank lines.
+    gtChompStrip = '-'   # remove the line feed, remove the trailing blank lines.
+    gtChompKeep  = '+'   # keep the line feed, keep trailing blank lines.
+
+  pipeChompClip = '|':   # keep the line feed, remove the trailing blank lines.
+    pipeChompStrip = '-' # remove the line feed, remove the trailing blank lines.
+    pipeChompKeep = '+'  # keep the line feed, keep trailing blank lines.
+
   altString = tokenize(handleAltString, '\'')
   comment = tokenize(handleComment, '#')
   `nil` = ["NIL", "Nil", "nil"]
@@ -151,6 +159,7 @@ type
     Field
     String
     Int
+    Float
     Bool
     Comment
     Variable
@@ -177,11 +186,13 @@ type
       fieldKey:string
       fieldValue: seq[Node]
     of String:
-      strv: string
+      vStr: string
     of Int:
-      intv: int
+      vInt: int
+    of Float:
+      vFloat: float
     of Bool:
-      boolv: bool
+      vBool: bool
     of Variable:
       varIdent: string
       varRight: seq[Node]
@@ -193,7 +204,7 @@ type
 
 const
   assignables = {tkString, tkInteger, tkTrue, tkFalse, tkIdentifier}
-  literals = {tkString, tkAltString, tkInteger, tkTrue, tkFalse, tkNil, tkNull}
+  literals = {tkString, tkAltString, tkInteger, tkFloat, tkTrue, tkFalse, tkNil, tkNull}
 
 proc setError[T: Parser](p: var T, msg: string) =
   p.error = "Error ($2:$3): $1" % [msg, $p.curr.line, $p.curr.pos]
@@ -216,10 +227,23 @@ proc walk(p: var Parser, offset = 1) =
 
 proc getContents*(p: var Parser): string = p.code
 
+proc strEscape(s: string, prefix, suffix = "\""): string =
+  result = newStringOfCap(s.len + s.len shr 2)
+  result.add(prefix)
+  for c in items(s):
+    case c
+    of '\0'..'\31', '\127'..'\255':
+      add(result, "\\x")
+      add(result, toHex(ord(c), 2))
+    of '\\': add(result, "\\\\")
+    of '\"': add(result, "\\\"")
+    else: add(result, c)
+  add(result, suffix)
+
 template `$$`(value: string) = add p.code, "\"" & value & "\":"
-template `$=`(value: string) = add p.code, "\"" & value & "\""
+template `$=`(value: string) = add p.code, value
 template `$=`(value: bool) = add p.code, $value
-template `$=`(value: int) = add p.code, $value
+template `$=`(value: int|float) = add p.code, $value
 # proc `$`(program: Program): string = pretty toJson(program), 2
 proc `$`(node: Node): string = pretty toJson(node), 2
 
@@ -259,8 +283,13 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
     of Object:
       if node[i].key.len != 0:
         $$ node[i].key
-      if node[i].value[0].nt == Array:
-        p.writeNodes(node[i].value)
+      if node[i].value.len > 0:
+        if node[i].value[0].nt == Array:
+          p.writeNodes(node[i].value)
+        else:
+          `{`:
+            p.writeNodes(node[i].value)
+          `}`
       else:
         `{`:
           p.writeNodes(node[i].value)
@@ -273,11 +302,13 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
         p.writeNodes(node[i].items)
       `]`
     of Bool:
-      $= node[i].boolv
+      $= node[i].vBool
     of Int:
-      $= node[i].intv
+      $= node[i].vInt
+    of Float:
+      $= node[i].vFloat
     of String:
-      $= xmltree.escape(node[i].strv)
+      $= strEscape(node[i].vStr)
     of Nil:
       p.code &= "null"
     of Variable:
@@ -287,7 +318,7 @@ proc writeNodes(p: var Parser, node: seq[Node]) =
         if node[i].varRight.len != 0:
           var strConcat = jsonValue.getStr
           for nodeConcat in node[i].varRight:
-            strConcat &= nodeConcat.strv
+            strConcat &= nodeConcat.vStr
           $= strConcat
         else:
           $= jsonValue.getStr
@@ -326,7 +357,7 @@ proc parseUnquotedStrings(p: var Parser,
       break
     identToStr.value &= indent(p.curr.value, p.curr.wsno)
     walk p
-  strNode.strv = identToStr.value.strip()
+  strNode.vStr = identToStr.value.strip()
   result = strNode
 
 proc parse(p: var Parser, inArray = false): Node
@@ -334,17 +365,30 @@ proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node
 
 proc parseString(p: var Parser): Node =
   result = p.newNode String
-  result.strv = p.curr.value
+  result.vStr = p.curr.value
   walk p
 
+template checkInlineString {.dirty.} =
+  if p.next.line == p.curr.line:
+    let this = p.curr
+    return p.parseUnquotedStrings(this)
+
 proc parseInt(p: var Parser): Node =
+  checkInlineString()
   result = p.newNode Int
-  result.intv = parseInt(p.curr.value)
+  result.vInt = parseInt(p.curr.value)
+  walk p
+
+proc parseFloat(p: var Parser): Node =
+  checkInlineString()
+  result = p.newNode Float
+  result.vFloat = parseFloat(p.curr.value)
   walk p
 
 proc parseBool(p: var Parser, lit: bool): Node =
+  checkInlineString()
   result = p.newNode Bool
-  result.boolv = lit
+  result.vBool = lit
   walk p
 
 proc parseVariable(p: var Parser, this: TokenTuple, inArray = false): Node =
@@ -361,8 +405,10 @@ proc parseVariable(p: var Parser, this: TokenTuple, inArray = false): Node =
 proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
   while p.curr.kind == tkHyphen and p.curr.pos == node.meta.pos:
     walk p # -
-    if p.curr.kind in literals + {tkVariable}:
-      node.items.add p.parse()
+    if p.curr.kind in literals + {tkVariable, tkLC}:
+      let lineno = p.curr.line
+      while p.curr.line == lineno and p.curr.kind != tkEOF:
+        node.items.add p.parse()
     elif p.curr.kind == tkIdentifier:
       if p.next.kind != tkColon:
         # handle unquoted strings.
@@ -375,14 +421,21 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
           subNode = p.parse(inArray = true)
         if subNode.nt == Field:
           objectNode.value.add(subNode)  
-        while p.curr.kind in {tkIdentifier, tkHyphen} and p.curr.pos >= this.pos:
-          let childNode = p.parse(inArray = true)
-          if subNode.nt == Field:
+        else:
+          objectNode.value.add(subNode)
+        while p.curr.kind in {tkIdentifier, tkHyphen} and
+          p.curr.pos >= this.pos:
+          if p.curr.pos == subNode.meta[1]:
+            let childNode = p.parse(inArray = true)
             add objectNode.value, childNode
-          elif subNode.nt == Object:
-            add subNode.value, childNode
-
-        objectNode.value.add(subNode)
+          elif p.curr.pos > this.pos:
+            let childNode = p.parse(inArray = true)
+            case subNode.nt
+            of Field:
+              add objectNode.value, childNode
+            of Object:
+              add subNode.value, childNode
+            else: discard
         node.items.add objectNode
 
 proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
@@ -401,6 +454,27 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     if p.curr.kind == tkComma: walk p
   walk p # ]
 
+template parseNestObjects =
+  if p.curr.kind in literals and p.curr.line == this.line:
+    ! result.value.add p.parse()
+  elif p.curr.kind in {tkIdentifier, tkInteger, tkHyphen} and p.curr.pos >= this.pos:
+    if p.curr.kind == tkIdentifier and p.curr.pos == this.pos and inArray == false:
+      p.setError("Invalid indentation")
+      return
+    while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkInteger, tkHyphen}:
+      if p.curr.kind in {tkIdentifier, tkInteger} and p.next.kind != tkColon:
+        p.setError("Missing assignment token")
+        return
+      if p.curr.kind == tkInteger:
+        p.curr.kind = tkIdentifier
+      let sub = p.parse()
+      result.value.add sub
+      if p.curr.pos > sub.meta.pos and p.curr.kind notin {tkEOF, tkHyphen, tkComment}:
+        p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
+        break
+  elif p.curr.kind == tkLB:
+    result.value.add(p.parse())
+
 proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node =
   walk p # tkIdentifier
   let colon = p.curr; walk p
@@ -408,7 +482,29 @@ proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node =
     result = p.newNode(Field, this)
     result.fieldKey = this.value
     result.fieldValue.add(p.parse())
-  elif p.curr.kind in literals and (p.curr.line > this.line and p.curr.pos > this.pos):    
+  elif p.curr.kind == tkPipeChompStrip: # |-
+    result = p.newNode(Field, this)
+    result.fieldKey = this.value
+    walk p
+    var x = p.newNode String
+    var str: seq[string]
+    while p.curr.pos > this.pos and p.curr.kind != tkEOF:
+      if p.curr.line > p.prev.line:
+        add str, ("\\n" & p.curr.value)
+      else:
+        add str, indent(p.curr.value, p.curr.wsno)
+      walk p
+    x.vStr = str.join("")
+    result.fieldValue.add(x)
+  elif (p.curr.kind in literals or p.curr.kind == tkIdentifier) and ((p.curr.line > this.line and p.curr.pos > this.pos) and p.next.kind == tkColon):
+    result = p.newNode(Object, this)
+    result.key = this.value
+    p.curr.kind = tkString
+    let sub = p.curr
+    result.value.add(p.parseObject(sub, inArray))
+    while p.curr.pos > this.pos and p.curr.kind != tkEOF:
+      result.value.add p.parse()
+  elif p.curr.kind in literals and (p.curr.line > this.line and p.curr.pos > this.pos):
     result = p.newNode(Field, this)
     result.fieldKey = this.value
     var x = p.newNode String
@@ -416,7 +512,7 @@ proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node =
     while p.curr.pos > this.pos and p.curr.kind != tkEOF:
       add str, p.curr.value
       walk p
-    x.strv = str.join(" ")
+    x.vStr = str.join(" ")
     result.fieldValue.add(x)
   elif p.curr.kind != tkEOF and p.curr.line == this.line:
     if p.curr.kind == tkLB:
@@ -435,25 +531,7 @@ proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node =
   else:
     result = p.newNode(Object, this)
     result.key = this.value
-    if p.curr.kind in literals and p.curr.line == this.line:
-      ! result.value.add p.parse()
-    elif p.curr.kind in {tkIdentifier, tkInteger, tkHyphen} and p.curr.pos >= this.pos:
-      if p.curr.kind == tkIdentifier and p.curr.pos == this.pos and inArray == false:
-        p.setError("Invalid indentation")
-        return
-      while p.curr.pos > this.pos and p.curr.kind in {tkIdentifier, tkInteger, tkHyphen}:
-        if p.curr.kind in {tkIdentifier, tkInteger} and p.next.kind != tkColon:
-          p.setError("Missing assignment token")
-          return
-        if p.curr.kind == tkInteger:
-          p.curr.kind = tkIdentifier
-        let sub = p.parse()
-        result.value.add sub
-        if p.curr.pos > sub.meta.pos and p.curr.kind notin {tkEOF, tkHyphen, tkComment}:
-          p.setError("Invalid indentation for \"$1\"" % [p.curr.value])
-          break
-    elif p.curr.kind == tkLB:
-      result.value.add(p.parse())
+    parseNestObjects()
 
 proc parse(p: var Parser, inArray = false): Node =
   # Parse YAML to AST nodes
@@ -470,15 +548,24 @@ proc parse(p: var Parser, inArray = false): Node =
     p.parseArray(node, this)
     result = node
   of tkString, tkAltString:
+    if p.next.kind == tkColon:
+      p.curr.kind = tkIdentifier
+      return p.parseObject(this, inArray)
     result = p.parseString()
   of tkInteger:
     result = p.parseInt()
+  of tkFloat:
+    result = p.parseFloat()
   of tkTrue:
     result = p.parseBool true
   of tkFalse:
     result = p.parseBool false
   of tkLB:
     result = p.parseInlineArray(this)
+  of tkLC:
+    if p.next.kind == tkRC:
+      walk p, 2
+      return p.newNode(Object, this)
   of tkVariable:
     result = p.parseVariable(this)
   of tkComment: walk p
