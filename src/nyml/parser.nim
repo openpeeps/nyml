@@ -369,7 +369,7 @@ proc parseString(p: var Parser): Node =
   walk p
 
 template checkInlineString {.dirty.} =
-  if p.next.kind != tkEOF and p.next.line == p.curr.line:
+  if p.next.kind notin {tkEOF, tkComment} and p.next.line == p.curr.line:
     let this = p.curr
     return p.parseUnquotedStrings(this)
 
