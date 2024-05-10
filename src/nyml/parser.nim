@@ -369,7 +369,7 @@ proc parseString(p: var Parser): Node =
   walk p
 
 template checkInlineString {.dirty.} =
-  if p.next.line == p.curr.line:
+  if p.next.kind != tkEOF and p.next.line == p.curr.line:
     let this = p.curr
     return p.parseUnquotedStrings(this)
 
@@ -450,7 +450,7 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     elif p.curr.kind == tkVariable:
       result.items.add p.parseVariable(this, true)
     else:
-      result.items.add p.parseUnquotedStrings(this, {tkRB, tkComma})
+      result.items.add p.parseUnquotedStrings(this, {tkRB, tkComma}) # todo fails to find tkRB
     if p.curr.kind == tkComma: walk p
   walk p # ]
 
