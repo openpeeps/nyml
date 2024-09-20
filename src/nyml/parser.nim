@@ -40,6 +40,18 @@ handlers:
         lex.kind = tkString
         result = lex.kind
         break
+      of '#':
+        if lex.buf[lex.bufpos - 1] == ' ':
+          lex.token = lex.token.strip
+          inc lex.bufpos
+          while true:
+            case lex.buf[lex.bufpos]
+            of EndOfFile, NewLines: break
+            else:
+              inc lex.bufpos
+        else:
+          add lex.token, lex.buf[lex.bufpos]
+          inc lex.bufpos
       of ':':
         lex.kind = tkIdentifier
         result = lex.kind
@@ -363,15 +375,16 @@ proc parseUnquotedStrings(p: var Parser,
 proc parse(p: var Parser, inArray = false): Node
 proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node
 
-proc parseString(p: var Parser): Node =
-  result = p.newNode String
-  result.vStr = p.curr.value
-  walk p
-
 template checkInlineString {.dirty.} =
   if p.next.kind notin {tkEOF, tkComment} and p.next.line == p.curr.line:
     let this = p.curr
-    return p.parseUnquotedStrings(this)
+    return p.parseUnquotedStrings(this, {tkComment})
+
+proc parseString(p: var Parser): Node =
+  checkInlineString()
+  result = p.newNode String
+  result.vStr = p.curr.value
+  walk p
 
 proc parseInt(p: var Parser): Node =
   checkInlineString()
@@ -397,10 +410,10 @@ proc parseVariable(p: var Parser, this: TokenTuple, inArray = false): Node =
   walk p
   if inArray:
     if p.curr.line == this.line and p.curr.kind notin {tkComment, tkEOF, tkRB, tkComma}:
-      result.varRight.add p.parseUnquotedStrings(this, {tkRB, tkComma})
+      result.varRight.add p.parseUnquotedStrings(this, {tkRB, tkComma, tkComment})
   else:
     if p.curr.line == this.line and p.curr.kind notin {tkComment, tkEOF}:
-      result.varRight.add p.parseUnquotedStrings(this)
+      result.varRight.add p.parseUnquotedStrings(this, {tkComment})
 
 proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
   while p.curr.kind == tkHyphen and p.curr.pos == node.meta.pos:
@@ -412,7 +425,7 @@ proc parseArray(p: var Parser, node: Node, this: TokenTuple) =
     elif p.curr.kind == tkIdentifier:
       if p.next.kind != tkColon:
         # handle unquoted strings.
-        node.items.add p.parseUnquotedStrings(this, {tkHyphen})
+        node.items.add p.parseUnquotedStrings(this, {tkHyphen, tkComment})
       else:
         # handle objects 
         let
@@ -450,7 +463,7 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     elif p.curr.kind == tkVariable:
       result.items.add p.parseVariable(this, true)
     else:
-      result.items.add p.parseUnquotedStrings(this, {tkRB, tkComma}) # todo fails to find tkRB
+      result.items.add p.parseUnquotedStrings(this, {tkRB, tkComma, tkComment}) # todo fails to find tkRB
     if p.curr.kind == tkComma: walk p
   walk p # ]
 
@@ -527,7 +540,7 @@ proc parseObject(p: var Parser, this: TokenTuple, inArray = false): Node =
     else:
       result = p.newNode(Field, this)
       result.fieldKey = this.value
-      result.fieldValue.add p.parseUnquotedStrings(this)
+      result.fieldValue.add p.parseUnquotedStrings(this, {tkComment})
   else:
     result = p.newNode(Object, this)
     result.key = this.value
