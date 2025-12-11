@@ -243,13 +243,16 @@ proc strEscape(s: string, prefix, suffix = "\""): string =
   result = newStringOfCap(s.len + s.len shr 2)
   result.add(prefix)
   for c in items(s):
+    # Only escape control chars, backslash, and double-quote.
     case c
-    of '\0'..'\31', '\127'..'\255':
+    of '\0'..'\31':
       add(result, "\\x")
       add(result, toHex(ord(c), 2))
     of '\\': add(result, "\\\\")
     of '\"': add(result, "\\\"")
-    else: add(result, c)
+    else:
+      # Preserve all other Unicode characters, including emojis.
+      add(result, c)
   add(result, suffix)
 
 template `$$`(value: string) = add p.code, "\"" & value & "\":"
