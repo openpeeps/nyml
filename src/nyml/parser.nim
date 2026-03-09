@@ -383,26 +383,26 @@ template checkInlineString {.dirty.} =
     let this = p.curr
     return p.parseUnquotedStrings(this, {tkComment})
 
-proc parseString(p: var Parser): Node =
-  checkInlineString()
+proc parseString(p: var Parser, allowInlineString = true): Node =
+  if allowInlineString: checkInlineString()
   result = p.newNode String
   result.vStr = p.curr.value
   walk p
 
-proc parseInt(p: var Parser): Node =
-  checkInlineString()
+proc parseInt(p: var Parser, allowInlineString = true): Node =
+  if allowInlineString: checkInlineString()
   result = p.newNode Int
   result.vInt = parseInt(p.curr.value)
   walk p
 
-proc parseFloat(p: var Parser): Node =
-  checkInlineString()
+proc parseFloat(p: var Parser, allowInlineString = true): Node =
+  if allowInlineString: checkInlineString()
   result = p.newNode Float
   result.vFloat = parseFloat(p.curr.value)
   walk p
 
-proc parseBool(p: var Parser, lit: bool): Node =
-  checkInlineString()
+proc parseBool(p: var Parser, lit: bool, allowInlineString = true): Node =
+  if allowInlineString: checkInlineString()
   result = p.newNode Bool
   result.vBool = lit
   walk p
@@ -461,13 +461,24 @@ proc parseInlineArray(p: var Parser, this: TokenTuple): Node =
     if p.curr.kind == tkEOF:
       p.setError("EOF reached before closing array")
       return
-    if p.curr.kind in literals:
-      result.items.add p.parse()
-    elif p.curr.kind == tkVariable:
-      result.items.add p.parseVariable(this, true)
+    case p.curr.kind
+    of tkString, tkAltString:
+      result.items.add p.parseString(allowInlineString = false)
+    of tkInteger:
+      result.items.add p.parseInt(allowInlineString = false)
+    of tkFloat:
+      result.items.add p.parseFloat(allowInlineString = false)
+    of tkTrue:
+      result.items.add p.parseBool(true, allowInlineString = false)
+    of tkFalse:
+      result.items.add p.parseBool(false, allowInlineString = false)
+    of tkVariable:
+      result.items.add p.parseVariable(this, inArray = true)
+    of tkComma:
+      walk p # skip comma
     else:
-      result.items.add p.parseUnquotedStrings(this, {tkRB, tkComma, tkComment}) # todo fails to find tkRB
-    if p.curr.kind == tkComma: walk p
+      p.setError("Invalid value in inline array")
+      return
   walk p # ]
 
 template parseNestObjects =
