@@ -67,7 +67,3 @@ template fromYaml*[T: typedesc](str: string, obj: T): untyped =
     raise newException(YAMLException, p.lex.getError)
   var jsonContent = p.getContents()
   fromJson(jsonContent, obj)
-
-when isMainModule:
-  # echo yaml(readFile("typesense.yaml")).toJsonStr
-  echo yaml(readFile("test2.yml")).toJsonStr()
