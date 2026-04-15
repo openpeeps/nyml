@@ -9,7 +9,7 @@ srcDir        = "src"
 
 requires "nim >= 1.4.0"
 requires "toktok#head"
-requires "openparser#head"
+requires "https://github.com/openpeeps/openparser"
 
 task tests, "Run test":
   exec "testament p 'tests/*.nim'"
