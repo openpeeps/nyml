@@ -5,12 +5,13 @@
 #          Made by Humans from OpenPeeps
 #          https://github.com/openpeeps/nyml
 
-import jsony
 import std/macros
 import std/json except `%*`
+
+import pkg/openparser/json
 import nyml/[meta, parser, dump]
 
-export meta, dump, jsony
+export meta, dump
 export getInt, getStr, getBool, getFloat
 
 proc parse*(n: YAML): Parser =
@@ -58,7 +59,6 @@ proc toYAML*(json: string): string = dump(parseJson(json))
 
 template fromYaml*[T: typedesc](str: string, obj: T): untyped =
   ## Add support for loose, direct to object parser using
-  ## https://github.com/treeform/jsony
   var yml = YAML.init(str, false, nil)
   var p: Parser = yml.parse()
   if p.hasError():
@@ -66,8 +66,8 @@ template fromYaml*[T: typedesc](str: string, obj: T): untyped =
   elif p.lex.hasError():
     raise newException(YAMLException, p.lex.getError)
   var jsonContent = p.getContents()
-  jsony.fromJson(jsonContent, obj)
+  fromJson(jsonContent, obj)
 
-# when isMainModule:
+when isMainModule:
   # echo yaml(readFile("typesense.yaml")).toJsonStr
-  # echo yaml(readFile("test.yml"), data = %*{"hello": "yepsi"}).toJsonStr()
+  echo yaml(readFile("test2.yml")).toJsonStr()

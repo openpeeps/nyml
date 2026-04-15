@@ -9,7 +9,7 @@ srcDir        = "src"
 
 requires "nim >= 1.4.0"
 requires "toktok#head"
-requires "jsony"
+requires "openparser#head"
 
 task tests, "Run test":
   exec "testament p 'tests/*.nim'"
