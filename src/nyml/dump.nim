@@ -5,8 +5,8 @@
 #          Made by Humans from OpenPeeps
 #          https://github.com/openpeeps/nyml
 
-import jsony
-import std/[json, strutils]
+import std/strutils
+import pkg/openparser/json
 
 type
   JD* = object
