@@ -237,7 +237,7 @@ proc walk(p: var Parser, offset = 1) =
     while p.next.kind == tkComment:
       p.next = p.lex.getToken()
 
-proc getContents*(p: var Parser): string = p.code
+proc getContents*(p: var Parser): lent string = p.code
 
 proc strEscape(s: string, prefix, suffix = "\""): string =
   result = newStringOfCap(s.len + s.len shr 2)

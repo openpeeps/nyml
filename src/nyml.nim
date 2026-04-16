@@ -6,8 +6,6 @@
 #          https://github.com/openpeeps/nyml
 
 import std/macros
-import std/json except `%*`
-
 import pkg/openparser/json
 import nyml/[meta, parser, dump]
 
@@ -29,7 +27,7 @@ proc toJson*(n: YAML): Document =
     raise newException(YAMLException, p.getError)
   elif p.lex.hasError():
     raise newException(YAMLException, p.lex.getError)
-  result = Document(contents: parseJson(p.getContents()))
+  result = Document(contents: fromJSON(p.getContents()))
 
 proc toJsonStr*(n: YAML, prettyPrint = false, indent = 2): string =
   ## Parse YAML contents to stringified JSON
@@ -40,7 +38,7 @@ proc toJsonStr*(n: YAML, prettyPrint = false, indent = 2): string =
     raise newException(YAMLException, p.lex.getError)
   else:
     if prettyPrint:
-      return pretty(parseJson(p.getContents()), indent)
+      return pretty(fromJSON(p.getContents()), indent)
     result = p.getContents()
 
 proc toJsonStr*(n: YAML, ruler:seq[string], prettyPrint = false, indent = 2): string =
@@ -55,7 +53,7 @@ proc `$`*(n: YAML): string =
   result = n.toJsonStr(prettyPrint = n.isPretty)
 
 proc toYAML*(json: JsonNode): string = dump(json)
-proc toYAML*(json: string): string = dump(parseJson(json))
+proc toYAML*(json: string): string = dump(fromJSON(json))
 
 template fromYaml*[T: typedesc](str: string, obj: T): untyped =
   ## Add support for loose, direct to object parser using
