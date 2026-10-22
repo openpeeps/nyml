@@ -2,6 +2,9 @@
   😋 A stupid simple YAML Parser.<br>From <code>YAML</code> to stringified <code>JSON</code>, <code>JsonNode</code> or <code>Nim</code> objects via <code>pkg/jsony</code><br>
 </p>
 
+> [!NOTE]
+> Not maintained. Moved at OpenParser, a collection tiny parsers and serializers (including YAML) 👉 https://github.com/openpeeps/openparser
+
 <p align="center">
   <code>nimble install nyml</code>
 </p>
