@@ -3,7 +3,7 @@
 </p>
 
 > [!NOTE]
-> Not maintained. Moved at OpenParser, a collection tiny parsers and serializers (including YAML) 👉 https://github.com/openpeeps/openparser
+> Not maintained. Moved at OpenParser, a collection tiny parsers and serializers (including YAML): https://github.com/openpeeps/openparser
 
 <p align="center">
   <code>nimble install nyml</code>
